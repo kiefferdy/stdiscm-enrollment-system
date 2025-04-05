@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title>Courses</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="row">
+            <div class="col-md-12">
+                <h1 class="mb-4">Available Courses</h1>
+                <div class="alert alert-info">
+                    Browse and enroll in available courses below.
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title">Course List</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-danger d-none" id="errorMessage"></div>
+                        <div class="alert alert-success d-none" id="successMessage"></div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Code</th>
+                                        <th>Title</th>
+                                        <th>Description</th>
+                                        <th>Credits</th>
+                                        <th>Instructor</th>
+                                        <th>Availability</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="courseList">
+                                    <!-- Course list will be loaded here -->
+                                    <tr>
+                                        <td colspan="7" class="text-center">Loading courses...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/js/auth.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if user is authenticated
+            if (!requireAuth()) return;
+            
+            loadCourses();
+            
+            function loadCourses() {
+                axios.get('/api/courses/open')
+                    .then(function(response) {
+                        if (response.data.success) {
+                            displayCourses(response.data.data);
+                        } else {
+                            showError(response.data.message);
+                        }
+                    })
+                    .catch(function(error) {
+                        showError('Failed to load courses. Please try again later.');
+                        console.error(error);
+                    });
+            }
+            
+            function displayCourses(courses) {
+                const courseList = document.getElementById('courseList');
+                
+                if (courses.length === 0) {
+                    courseList.innerHTML = '<tr><td colspan="7" class="text-center">No courses available at the moment.</td></tr>';
+                    return;
+                }
+                
+                let html = '';
+                courses.forEach(course => {
+                    html += `
+                        <tr>
+                            <td>${course.courseCode}</td>
+                            <td>${course.title}</td>
+                            <td>${course.description}</td>
+                            <td>${course.credits}</td>
+                            <td>${course.facultyName || 'N/A'}</td>
+                            <td>
+                                ${course.hasAvailableSlots 
+                                    ? `<span class="badge bg-success">Available (${course.enrolled}/${course.capacity})</span>` 
+                                    : `<span class="badge bg-danger">Full (${course.enrolled}/${course.capacity})</span>`}
+                            </td>
+                            <td>
+                                ${course.hasAvailableSlots 
+                                    ? `<button class="btn btn-sm btn-primary" onclick="enrollCourse(${course.id})">Enroll</button>` 
+                                    : `<button class="btn btn-sm btn-secondary" disabled>Full</button>`}
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                courseList.innerHTML = html;
+            }
+            
+            // Global function to enroll in a course
+            window.enrollCourse = function(courseId) {
+                axios.post(`/api/courses/enrollments/enroll/${courseId}`)
+                    .then(function(response) {
+                        if (response.data.success) {
+                            showSuccess(response.data.message);
+                            loadCourses(); // Reload the course list
+                        } else {
+                            showError(response.data.message);
+                        }
+                    })
+                    .catch(function(error) {
+                        if (error.response && error.response.data) {
+                            showError(error.response.data.message);
+                        } else {
+                            showError('Failed to enroll in the course. Please try again.');
+                        }
+                        console.error(error);
+                    });
+            };
+            
+            function showError(message) {
+                const errorElement = document.getElementById('errorMessage');
+                errorElement.textContent = message;
+                errorElement.classList.remove('d-none');
+                
+                document.getElementById('successMessage').classList.add('d-none');
+                
+                // Hide after 5 seconds
+                setTimeout(() => {
+                    errorElement.classList.add('d-none');
+                }, 5000);
+            }
+            
+            function showSuccess(message) {
+                const successElement = document.getElementById('successMessage');
+                successElement.textContent = message;
+                successElement.classList.remove('d-none');
+                
+                document.getElementById('errorMessage').classList.add('d-none');
+                
+                // Hide after 5 seconds
+                setTimeout(() => {
+                    successElement.classList.add('d-none');
+                }, 5000);
+            }
+        });
+    </script>
+</body>
+</html>

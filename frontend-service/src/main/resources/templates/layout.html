@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title layout:title-pattern="$CONTENT_TITLE - $LAYOUT_TITLE">Enrollment System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        main {
+            flex: 1;
+        }
+        
+        .footer {
+            margin-top: auto;
+            padding: 1rem 0;
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+            <div class="container">
+                <a class="navbar-brand" href="/">Enrollment System</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                        aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav me-auto">
+                        <li class="nav-item" id="dashboardLink">
+                            <a class="nav-link" href="/dashboard">Dashboard</a>
+                        </li>
+                        <li class="nav-item" id="coursesLink">
+                            <a class="nav-link" href="/courses">Courses</a>
+                        </li>
+                        <li class="nav-item" id="enrollmentsLink">
+                            <a class="nav-link" href="/enrollments">Enrollments</a>
+                        </li>
+                        <li class="nav-item" id="gradesLink">
+                            <a class="nav-link" href="/grades">Grades</a>
+                        </li>
+                        <!-- Faculty links will be shown only to faculty users -->
+                        <li class="nav-item dropdown d-none" id="facultyDropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
+                               data-bs-toggle="dropdown" aria-expanded="false">
+                                Faculty
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+                                <li><a class="dropdown-item" href="/faculty/courses">Manage Courses</a></li>
+                                <li><a class="dropdown-item" href="/faculty/grades">Manage Grades</a></li>
+                            </ul>
+                        </li>
+                    </ul>
+                    <ul class="navbar-nav">
+                        <li class="nav-item" id="loginLink">
+                            <a class="nav-link" href="/login">Login</a>
+                        </li>
+                        <li class="nav-item" id="registerLink">
+                            <a class="nav-link" href="/register">Register</a>
+                        </li>
+                        <li class="nav-item d-none" id="logoutLink">
+                            <a class="nav-link" href="#" onclick="logout()">Logout</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container my-5">
+        <div layout:fragment="content">
+            <!-- Page content will be inserted here -->
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container text-center">
+            <span class="text-muted">&copy; 2023 Distributed Enrollment System</span>
+        </div>
+    </footer>
+
+    <script>
+        // Check if user is logged in
+        document.addEventListener('DOMContentLoaded', function() {
+            const token = localStorage.getItem('token');
+            const userRoles = JSON.parse(localStorage.getItem('userRoles') || '[]');
+            
+            if (token) {
+                // User is logged in
+                document.getElementById('loginLink').classList.add('d-none');
+                document.getElementById('registerLink').classList.add('d-none');
+                document.getElementById('logoutLink').classList.remove('d-none');
+                
+                // Show dashboard, courses, enrollments, and grades links
+                document.getElementById('dashboardLink').classList.remove('d-none');
+                document.getElementById('coursesLink').classList.remove('d-none');
+                document.getElementById('enrollmentsLink').classList.remove('d-none');
+                document.getElementById('gradesLink').classList.remove('d-none');
+                
+                // Show faculty dropdown if user has FACULTY role
+                if (userRoles.includes('FACULTY')) {
+                    document.getElementById('facultyDropdown').classList.remove('d-none');
+                }
+            } else {
+                // User is not logged in
+                document.getElementById('loginLink').classList.remove('d-none');
+                document.getElementById('registerLink').classList.remove('d-none');
+                document.getElementById('logoutLink').classList.add('d-none');
+                
+                // Hide dashboard, courses, enrollments, and grades links
+                document.getElementById('dashboardLink').classList.add('d-none');
+                document.getElementById('coursesLink').classList.add('d-none');
+                document.getElementById('enrollmentsLink').classList.add('d-none');
+                document.getElementById('gradesLink').classList.add('d-none');
+                document.getElementById('facultyDropdown').classList.add('d-none');
+            }
+        });
+        
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('userId');
+            localStorage.removeItem('username');
+            localStorage.removeItem('userRoles');
+            window.location.href = '/';
+        }
+    </script>
+</body>
+</html>

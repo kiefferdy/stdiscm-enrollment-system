@@ -1,0 +1,177 @@
+services:
+  discovery-service:
+    build: ./discovery-service
+    ports:
+      - "8761:8761"
+    networks:
+      - enrollment-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+    networks:
+      - enrollment-network
+
+  auth-service:
+    build: ./auth-service
+    ports:
+      - "8081:8081"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
+      - SPRING_PROFILES_ACTIVE=docker,redundant
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db-primary:3306/enrollment_auth?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_SECONDARY_DATASOURCE_URL=jdbc:mysql://db-secondary:3306/enrollment_auth?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      db-primary:
+        condition: service_healthy
+      db-secondary:
+        condition: service_healthy
+    networks:
+      - enrollment-network
+
+  course-service:
+    build: ./course-service
+    ports:
+      - "8082:8082"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
+      - SPRING_PROFILES_ACTIVE=docker,redundant
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db-primary:3306/enrollment_course?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_SECONDARY_DATASOURCE_URL=jdbc:mysql://db-secondary:3306/enrollment_course?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      db-primary:
+        condition: service_healthy
+      db-secondary:
+        condition: service_healthy
+    networks:
+      - enrollment-network
+
+  grade-service:
+    build: ./grade-service
+    ports:
+      - "8083:8083"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
+      - SPRING_PROFILES_ACTIVE=docker,redundant
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db-primary:3306/enrollment_grade?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_SECONDARY_DATASOURCE_URL=jdbc:mysql://db-secondary:3306/enrollment_grade?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      db-primary:
+        condition: service_healthy
+      db-secondary:
+        condition: service_healthy
+    networks:
+      - enrollment-network
+
+  frontend-service:
+    build: ./frontend-service
+    ports:
+      - "8084:8084"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+    networks:
+      - enrollment-network
+
+  db-primary:
+    image: mysql:8.0
+    ports:
+      - "3308:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=enrollment
+    volumes:
+      - db-primary-data:/var/lib/mysql
+    networks:
+      - enrollment-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      
+  db-secondary:
+    image: mysql:8.0
+    ports:
+      - "3309:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=enrollment
+    volumes:
+      - db-secondary-data:/var/lib/mysql
+    networks:
+      - enrollment-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MySQL replication configuration for database redundancy
+  mysql-configure:
+    image: mysql:8.0
+    depends_on:
+      db-primary:
+        condition: service_healthy
+      db-secondary:
+        condition: service_healthy
+    volumes:
+      - ./mysql-init:/docker-entrypoint-initdb.d
+    environment:
+      - MASTER_HOST=db-primary
+      - SLAVE_HOST=db-secondary
+      - MYSQL_ROOT_PASSWORD=root
+    networks:
+      - enrollment-network
+    command: >
+      /bin/sh -c "
+        mysql -h db-primary -uroot -proot -e \"
+          CREATE USER 'replication_user'@'%' IDENTIFIED BY 'replication_password';
+          GRANT REPLICATION SLAVE ON *.* TO 'replication_user'@'%';
+          FLUSH PRIVILEGES;
+        \"
+        
+        MASTER_STATUS=$$(mysql -h db-primary -uroot -proot -e \"SHOW MASTER STATUS\\G\" | grep -E 'File|Position')
+        
+        MASTER_FILE=$$(echo $$MASTER_STATUS | grep -oE 'File: [^ ]+' | cut -d' ' -f2)
+        MASTER_POS=$$(echo $$MASTER_STATUS | grep -oE 'Position: [0-9]+' | cut -d' ' -f2)
+        
+        mysql -h db-secondary -uroot -proot -e \"
+          STOP SLAVE;
+          CHANGE MASTER TO MASTER_HOST='db-primary', 
+            MASTER_USER='replication_user', 
+            MASTER_PASSWORD='replication_password', 
+            MASTER_LOG_FILE='$$MASTER_FILE', 
+            MASTER_LOG_POS=$$MASTER_POS;
+          START SLAVE;
+        \"
+      "
+
+networks:
+  enrollment-network:
+    driver: bridge
+
+volumes:
+  db-primary-data:
+  db-secondary-data:

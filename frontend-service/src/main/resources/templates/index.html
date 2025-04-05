@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title>Home</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="row">
+            <div class="col-md-12 text-center">
+                <h1 class="display-4 mb-4">Welcome to the Enrollment System</h1>
+                <p class="lead">A distributed system for course enrollment and grade management</p>
+            </div>
+        </div>
+        
+        <div class="row mt-5">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <i class="bi bi-person-fill" style="font-size: 3rem;"></i>
+                        <h5 class="card-title mt-3">Students</h5>
+                        <p class="card-text">Enroll in courses, track your grades, and manage your academic journey</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <i class="bi bi-book-fill" style="font-size: 3rem;"></i>
+                        <h5 class="card-title mt-3">Courses</h5>
+                        <p class="card-text">Browse available courses, check prerequisites, and find the right classes</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <i class="bi bi-mortarboard-fill" style="font-size: 3rem;"></i>
+                        <h5 class="card-title mt-3">Faculty</h5>
+                        <p class="card-text">Manage courses, upload grades, and track student progress</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-5">
+            <div class="col-md-6 offset-md-3 text-center">
+                <div id="guestActions">
+                    <h3>Getting Started</h3>
+                    <a href="/login" class="btn btn-primary me-2">Login</a>
+                    <a href="/register" class="btn btn-outline-primary">Register</a>
+                </div>
+                <div id="userActions" class="d-none">
+                    <h3>Quick Actions</h3>
+                    <a href="/dashboard" class="btn btn-primary me-2">Go to Dashboard</a>
+                    <a href="/courses" class="btn btn-outline-primary">View Courses</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const token = localStorage.getItem('token');
+            if (token) {
+                document.getElementById('guestActions').classList.add('d-none');
+                document.getElementById('userActions').classList.remove('d-none');
+            } else {
+                document.getElementById('guestActions').classList.remove('d-none');
+                document.getElementById('userActions').classList.add('d-none');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title>My Enrollments</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="row">
+            <div class="col-md-12">
+                <h1 class="mb-4">My Enrollments</h1>
+                <div class="alert alert-info">
+                    View and manage your course enrollments.
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title">Enrollment List</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-danger d-none" id="errorMessage"></div>
+                        <div class="alert alert-success d-none" id="successMessage"></div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Course Code</th>
+                                        <th>Course Title</th>
+                                        <th>Enrollment Date</th>
+                                        <th>Grade</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="enrollmentList">
+                                    <!-- Enrollment list will be loaded here -->
+                                    <tr>
+                                        <td colspan="6" class="text-center">Loading enrollments...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/js/auth.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if user is authenticated
+            if (!requireAuth()) return;
+            
+            const userId = localStorage.getItem('userId');
+            
+            loadEnrollments();
+            
+            function loadEnrollments() {
+                axios.get(`/api/courses/enrollments/student/${userId}`)
+                    .then(function(response) {
+                        if (response.data.success) {
+                            displayEnrollments(response.data.data);
+                        } else {
+                            showError(response.data.message);
+                        }
+                    })
+                    .catch(function(error) {
+                        showError('Failed to load enrollments. Please try again later.');
+                        console.error(error);
+                    });
+            }
+            
+            function displayEnrollments(enrollments) {
+                const enrollmentList = document.getElementById('enrollmentList');
+                
+                if (enrollments.length === 0) {
+                    enrollmentList.innerHTML = '<tr><td colspan="6" class="text-center">You are not enrolled in any courses.</td></tr>';
+                    return;
+                }
+                
+                let html = '';
+                enrollments.forEach(enrollment => {
+                    html += `
+                        <tr>
+                            <td>${enrollment.courseCode}</td>
+                            <td>${enrollment.courseTitle}</td>
+                            <td>${formatDate(enrollment.enrollmentDate)}</td>
+                            <td>${enrollment.grade || 'Not Graded'}</td>
+                            <td>
+                                ${enrollment.isActive 
+                                    ? '<span class="badge bg-success">Active</span>' 
+                                    : '<span class="badge bg-secondary">Inactive</span>'}
+                            </td>
+                            <td>
+                                ${enrollment.grade 
+                                    ? '<button class="btn btn-sm btn-secondary" disabled>Drop</button>' 
+                                    : (enrollment.isActive 
+                                        ? `<button class="btn btn-sm btn-danger" onclick="dropEnrollment(${enrollment.id})">Drop</button>` 
+                                        : '<button class="btn btn-sm btn-secondary" disabled>Dropped</button>')}
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                enrollmentList.innerHTML = html;
+            }
+            
+            // Global function to drop an enrollment
+            window.dropEnrollment = function(enrollmentId) {
+                if (confirm('Are you sure you want to drop this course? This action cannot be undone.')) {
+                    axios.post(`/api/courses/enrollments/drop/${enrollmentId}`)
+                        .then(function(response) {
+                            if (response.data.success) {
+                                showSuccess(response.data.message);
+                                loadEnrollments(); // Reload the enrollment list
+                            } else {
+                                showError(response.data.message);
+                            }
+                        })
+                        .catch(function(error) {
+                            if (error.response && error.response.data) {
+                                showError(error.response.data.message);
+                            } else {
+                                showError('Failed to drop the course. Please try again.');
+                            }
+                            console.error(error);
+                        });
+                }
+            };
+            
+            function formatDate(dateString) {
+                if (!dateString) return 'N/A';
+                
+                const date = new Date(dateString);
+                return date.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                });
+            }
+            
+            function showError(message) {
+                const errorElement = document.getElementById('errorMessage');
+                errorElement.textContent = message;
+                errorElement.classList.remove('d-none');
+                
+                document.getElementById('successMessage').classList.add('d-none');
+                
+                // Hide after 5 seconds
+                setTimeout(() => {
+                    errorElement.classList.add('d-none');
+                }, 5000);
+            }
+            
+            function showSuccess(message) {
+                const successElement = document.getElementById('successMessage');
+                successElement.textContent = message;
+                successElement.classList.remove('d-none');
+                
+                document.getElementById('errorMessage').classList.add('d-none');
+                
+                // Hide after 5 seconds
+                setTimeout(() => {
+                    successElement.classList.add('d-none');
+                }, 5000);
+            }
+        });
+    </script>
+</body>
+</html>

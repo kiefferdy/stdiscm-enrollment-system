@@ -1,0 +1,7 @@
+[mysqld]
+server-id=1
+log_bin=mysql-bin
+binlog_format=ROW
+binlog_do_db=enrollment_auth
+binlog_do_db=enrollment_course
+binlog_do_db=enrollment_grade
