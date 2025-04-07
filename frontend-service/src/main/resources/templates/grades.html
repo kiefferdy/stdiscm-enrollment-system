@@ -47,19 +47,22 @@
             </div>
         </div>
     </div>
-    
-    <script src="/js/auth.js"></script>
-    <script>
+
+    <!-- Move page-specific script into the correct layout fragment -->
+    <th:block layout:fragment="page-scripts">
+        <script src="/js/auth.js"></script>
+        <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Check if user is authenticated
             if (!requireAuth()) return;
-            
+
             const userId = localStorage.getItem('userId');
-            
+            const API_BASE_URL = 'http://localhost:8080'; // Define API Gateway base URL
+
             loadGrades();
-            
+
             function loadGrades() {
-                axios.get(`/api/grades/student/${userId}`)
+                axios.get(`${API_BASE_URL}/api/grades/student/${userId}`) // Use base URL
                     .then(function(response) {
                         if (response.data.success) {
                             displayGrades(response.data.data);
@@ -119,5 +122,6 @@
             }
         });
     </script>
+    </th:block>
 </body>
 </html>

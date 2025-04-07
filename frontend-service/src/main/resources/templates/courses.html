@@ -51,17 +51,21 @@
             </div>
         </div>
     </div>
-    
-    <script src="/js/auth.js"></script>
-    <script>
+
+    <!-- Move page-specific script into the correct layout fragment -->
+    <th:block layout:fragment="page-scripts">
+        <script src="/js/auth.js"></script>
+        <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Check if user is authenticated
             if (!requireAuth()) return;
-            
+
+            const API_BASE_URL = 'http://localhost:8080'; // Define API Gateway base URL
+
             loadCourses();
-            
+
             function loadCourses() {
-                axios.get('/api/courses/open')
+                axios.get(`${API_BASE_URL}/api/courses/open`) // Use base URL
                     .then(function(response) {
                         if (response.data.success) {
                             displayCourses(response.data.data);
@@ -111,7 +115,7 @@
             
             // Global function to enroll in a course
             window.enrollCourse = function(courseId) {
-                axios.post(`/api/courses/enrollments/enroll/${courseId}`)
+                axios.post(`${API_BASE_URL}/api/courses/enrollments/enroll/${courseId}`) // Use base URL
                     .then(function(response) {
                         if (response.data.success) {
                             showSuccess(response.data.message);
@@ -157,5 +161,6 @@
             }
         });
     </script>
+    </th:block>
 </body>
 </html>

@@ -18,6 +18,7 @@ import java.security.Key;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 @Component
 public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> {
@@ -56,18 +57,47 @@ public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> 
                 
                 try {
                     Claims claims = validateToken(token);
-                    // Extract numeric userId from the "userId" claim
-                    Long userId = claims.get("userId", Long.class); 
-                    if (userId == null) {
-                        // Handle case where userId claim is missing or not a Long (shouldn't happen if JwtService is correct)
-                        return onError(exchange, "Invalid JWT token: Missing or invalid userId claim", HttpStatus.UNAUTHORIZED);
-                    }
-                    
-                    // Extract roles from the "roles" claim
-                    @SuppressWarnings("unchecked") // Suppress warning for unchecked cast
-                    List<String> roles = claims.get("roles", List.class); 
-                    if (roles == null) {
-                        roles = new ArrayList<>(); // Default to empty list if roles claim is missing
+                    Long userId = null;
+                    List<String> roles = null;
+
+                    // Separate try-catch for robust claim extraction
+                    try {
+                        // Extract numeric userId from the "userId" claim
+                        Object userIdClaim = claims.get("userId");
+                        if (userIdClaim instanceof Number) {
+                            userId = ((Number) userIdClaim).longValue();
+                        } else {
+                            // Log error: logger.error("Invalid userId claim type: {}", userIdClaim != null ? userIdClaim.getClass() : "null");
+                            return onError(exchange, "Invalid JWT token: Invalid userId claim type", HttpStatus.BAD_REQUEST);
+                        }
+
+                        // Extract roles from the "roles" claim safely
+                        Object rolesClaim = claims.get("roles");
+                        if (rolesClaim instanceof List) {
+                            List<?> rawRoles = (List<?>) rolesClaim;
+                            // Use stream to safely map and collect Strings, handling potential type errors
+                            try {
+                                roles = rawRoles.stream()
+                                                .map(obj -> (String) obj) // Cast each element
+                                                .collect(Collectors.toList());
+                            } catch (ClassCastException cce) {
+                                // Log error: logger.error("Invalid roles claim content: Contains non-String elements", cce);
+                                return onError(exchange, "Invalid JWT token: Invalid roles claim content", HttpStatus.BAD_REQUEST);
+                            }
+                        } else if (rolesClaim != null) {
+                             // Log error: logger.error("Invalid roles claim type: {}", rolesClaim.getClass());
+                             return onError(exchange, "Invalid JWT token: Invalid roles claim type", HttpStatus.BAD_REQUEST);
+                        }
+
+                        // Default to empty list if roles claim is missing or invalid type handled above
+                        if (roles == null) {
+                            roles = new ArrayList<>();
+                        }
+
+                    } catch (Exception claimEx) {
+                         // Log specific claim extraction error
+                         // logger.error("JWT Claim Extraction Error: {}", claimEx.getMessage(), claimEx);
+                         return onError(exchange, "Invalid JWT token: Malformed claims", HttpStatus.BAD_REQUEST);
                     }
 
                     // Add user info as headers to the downstream request

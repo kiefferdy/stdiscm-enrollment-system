@@ -12,20 +12,21 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "enrollments", uniqueConstraints = {
-    @UniqueConstraint(columnNames = {"student_id", "course_id"})
-})
+// Remove @Table annotation as a workaround for potential constraint issues
+// @Table(name = "enrollments", uniqueConstraints = {
+//    @UniqueConstraint(columnNames = {"student_id", "course_id"})
+// })
 public class Enrollment implements Serializable {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
-    @ManyToOne
-    @JoinColumn(name = "student_id", nullable = false)
-    private User student;
-    
-    @ManyToOne
+
+    // Store studentId directly, remove User relationship
+    @Column(name = "student_id", nullable = false)
+    private Long studentId;
+
+    @ManyToOne // Keep relationship to Course within this service's context
     @JoinColumn(name = "course_id", nullable = false)
     private Course course;
     

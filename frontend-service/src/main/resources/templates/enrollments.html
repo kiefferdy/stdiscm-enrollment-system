@@ -50,19 +50,22 @@
             </div>
         </div>
     </div>
-    
-    <script src="/js/auth.js"></script>
-    <script>
+
+    <!-- Move page-specific script into the correct layout fragment -->
+    <th:block layout:fragment="page-scripts">
+        <script src="/js/auth.js"></script>
+        <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Check if user is authenticated
             if (!requireAuth()) return;
-            
+
             const userId = localStorage.getItem('userId');
-            
+            const API_BASE_URL = 'http://localhost:8080'; // Define API Gateway base URL
+
             loadEnrollments();
-            
+
             function loadEnrollments() {
-                axios.get(`/api/courses/enrollments/student/${userId}`)
+                axios.get(`${API_BASE_URL}/api/courses/enrollments/student/${userId}`) // Use base URL
                     .then(function(response) {
                         if (response.data.success) {
                             displayEnrollments(response.data.data);
@@ -114,7 +117,7 @@
             // Global function to drop an enrollment
             window.dropEnrollment = function(enrollmentId) {
                 if (confirm('Are you sure you want to drop this course? This action cannot be undone.')) {
-                    axios.post(`/api/courses/enrollments/drop/${enrollmentId}`)
+                    axios.post(`${API_BASE_URL}/api/courses/enrollments/drop/${enrollmentId}`) // Use base URL
                         .then(function(response) {
                             if (response.data.success) {
                                 showSuccess(response.data.message);
@@ -172,5 +175,6 @@
             }
         });
     </script>
+    </th:block>
 </body>
 </html>

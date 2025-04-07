@@ -18,103 +18,106 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
 public class EnrollmentService {
-    
+
     @Autowired
     private EnrollmentRepository enrollmentRepository;
-    
+
     @Autowired
     private CourseRepository courseRepository;
-    
+
     @Autowired
     private CourseService courseService;
 
     @Autowired
     private AuthServiceClient authServiceClient; // Inject Feign Client
-    
+
     public List<EnrollmentDto> getEnrollmentsByStudentId(Long studentId) {
+        // Use explicit query from repository
         return enrollmentRepository.findByStudentId(studentId).stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
-    
+
     public List<EnrollmentDto> getEnrollmentsByCourseId(Long courseId) {
         return enrollmentRepository.findByCourseId(courseId).stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
-    
+
     public EnrollmentDto getEnrollmentById(Long id) {
         Enrollment enrollment = enrollmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Enrollment", "id", id));
         return convertToDto(enrollment);
     }
-    
+
     @Transactional
-    public EnrollmentDto enrollStudent(Long courseId, Long studentId) { // Changed signature
+    public EnrollmentDto enrollStudent(Long courseId, Long studentId) {
         // 1. Fetch Course
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new ResourceNotFoundException("Course", "id", courseId));
-        
-        // 2. Fetch Student User object from auth-service via Feign client
-        User student;
-        try {
-            ResponseEntity<ApiResponse<User>> response = authServiceClient.getUserById(studentId);
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null && response.getBody().getData() != null) {
-                student = response.getBody().getData();
-            } else {
-                String errorMsg = (response.getBody() != null && response.getBody().getMessage() != null) 
-                                  ? response.getBody().getMessage() 
-                                  : "User not found or auth-service error";
-                throw new ResourceNotFoundException("Student", "id", studentId + " (" + errorMsg + ")");
-            }
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to fetch student details for ID " + studentId + ": " + e.getMessage(), e);
-        }
 
-        // 3. Perform validation checks
+        // 2. Perform validation checks
         if (!course.getIsOpen()) {
             throw new BadRequestException("Course is not open for enrollment");
         }
-        
+
         if (course.getEnrolled() >= course.getCapacity()) {
             throw new BadRequestException("Course has reached its capacity");
         }
-        
-        // Use fetched student's ID for the check
-        if (enrollmentRepository.existsByStudentIdAndCourseId(student.getId(), courseId)) { 
-            throw new BadRequestException("Student is already enrolled in this course");
+
+        // 3. Check for existing enrollment (active or inactive)
+        Optional<Enrollment> existingEnrollmentOpt = enrollmentRepository.findByStudentIdAndCourseId(studentId, courseId);
+
+        if (existingEnrollmentOpt.isPresent()) {
+            Enrollment existingEnrollment = existingEnrollmentOpt.get();
+            if (existingEnrollment.getIsActive()) {
+                // Already actively enrolled
+                throw new BadRequestException("Student is already actively enrolled in this course");
+            } else {
+                // Re-enrollment: Update existing inactive record
+                existingEnrollment.setIsActive(true);
+                existingEnrollment.setEnrollmentDate(LocalDateTime.now()); // Update enrollment date
+                existingEnrollment.setGrade(null); // Clear any previous grade if re-enrolling
+
+                courseService.incrementEnrolled(courseId); // Increment count again
+
+                Enrollment savedEnrollment = enrollmentRepository.save(existingEnrollment);
+                return convertToDto(savedEnrollment);
+            }
+        } else {
+            // 4. Create and save NEW enrollment if none exists
+            Enrollment enrollment = new Enrollment();
+            enrollment.setStudentId(studentId); // Set studentId directly
+            enrollment.setCourse(course);
+            enrollment.setEnrollmentDate(LocalDateTime.now());
+            enrollment.setIsActive(true);
+
+            courseService.incrementEnrolled(courseId);
+
+            Enrollment savedEnrollment = enrollmentRepository.save(enrollment);
+            return convertToDto(savedEnrollment);
         }
-        
-        // 4. Create and save enrollment
-        Enrollment enrollment = new Enrollment();
-        enrollment.setStudent(student); // Use fetched student object
-        enrollment.setCourse(course);
-        enrollment.setEnrollmentDate(LocalDateTime.now());
-        enrollment.setIsActive(true);
-        
-        courseService.incrementEnrolled(courseId);
-        
-        Enrollment savedEnrollment = enrollmentRepository.save(enrollment);
-        return convertToDto(savedEnrollment);
     }
-    
+
     @Transactional
     public void dropEnrollment(Long enrollmentId, Long studentId) {
         Enrollment enrollment = enrollmentRepository.findById(enrollmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Enrollment", "id", enrollmentId));
-        
-        if (!enrollment.getStudent().getId().equals(studentId)) {
+
+        // Check against stored studentId
+        if (!enrollment.getStudentId().equals(studentId)) {
             throw new BadRequestException("Enrollment does not belong to the student");
         }
-        
+
         if (enrollment.getGrade() != null) {
             throw new BadRequestException("Cannot drop a course that already has a grade");
         }
-        
+
         courseService.decrementEnrolled(enrollment.getCourse().getId());
         enrollment.setIsActive(false);
         enrollmentRepository.save(enrollment);
@@ -128,7 +131,7 @@ public class EnrollmentService {
 
         // 2. Authorization Check: Ensure the faculty submitting the grade is assigned to the course
         // Use facultyId directly from the Course object
-        if (enrollment.getCourse() == null || enrollment.getCourse().getFacultyId() == null || 
+        if (enrollment.getCourse() == null || enrollment.getCourse().getFacultyId() == null ||
             !enrollment.getCourse().getFacultyId().equals(facultyId)) {
             throw new BadRequestException("Faculty not authorized to submit grade for this course enrollment.");
         }
@@ -149,13 +152,10 @@ public class EnrollmentService {
     // --- Methods for fetching GRADED enrollments ---
 
     public List<EnrollmentDto> getGradedEnrollmentsByStudentId(Long studentId) {
-        // Assuming EnrollmentRepository has or will have a method like findByStudentIdAndGradeIsNotNull
-        // For now, filter in memory after fetching (less efficient but works with current repo)
-        // Ideally, add a specific query to EnrollmentRepository
-        return enrollmentRepository.findByStudentId(studentId).stream()
-                .filter(e -> e.getGrade() != null)
-                .map(this::convertToDto)
-                .collect(Collectors.toList());
+    // Use the dedicated repository method to fetch only graded enrollments
+    return enrollmentRepository.findByStudentIdAndGradeIsNotNull(studentId).stream()
+            .map(this::convertToDto)
+            .collect(Collectors.toList());
     }
 
     public List<EnrollmentDto> getGradedEnrollmentsByCourseId(Long courseId) {
@@ -165,15 +165,15 @@ public class EnrollmentService {
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
-    
+
     public List<EnrollmentDto> getGradedEnrollmentsByFacultyId(Long facultyId) {
         // This requires a more complex query in EnrollmentRepository, joining Course and User
         // Placeholder: Fetch all and filter (inefficient)
         // Ideally, add findByCourseFacultyIdAndGradeIsNotNull to EnrollmentRepository
         // Use facultyId directly from the Course object for filtering
-        return enrollmentRepository.findAll().stream() 
-                .filter(e -> e.getGrade() != null && 
-                             e.getCourse() != null && 
+        return enrollmentRepository.findAll().stream()
+                .filter(e -> e.getGrade() != null &&
+                             e.getCourse() != null &&
                              e.getCourse().getFacultyId() != null &&
                              e.getCourse().getFacultyId().equals(facultyId))
                 .map(this::convertToDto)
@@ -181,28 +181,38 @@ public class EnrollmentService {
     }
 
     // --- Conversion ---
-    
+
     private EnrollmentDto convertToDto(Enrollment enrollment) {
         EnrollmentDto dto = new EnrollmentDto();
         dto.setId(enrollment.getId());
-        
-        if (enrollment.getStudent() != null) {
-            dto.setStudentId(enrollment.getStudent().getId());
-            dto.setStudentName(enrollment.getStudent().getFullName());
+        dto.setStudentId(enrollment.getStudentId()); // Set studentId directly
+
+        // Fetch student name from auth-service when converting to DTO
+        try {
+            ResponseEntity<ApiResponse<User>> response = authServiceClient.getUserById(enrollment.getStudentId());
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null && response.getBody().getData() != null) {
+                dto.setStudentName(response.getBody().getData().getFullName());
+            } else {
+                dto.setStudentName("N/A"); // Handle case where user might not be found or auth-service error
+            }
+        } catch (Exception e) {
+            // Log error if needed: logger.error("Failed to fetch student name for ID {}: {}", enrollment.getStudentId(), e.getMessage());
+            dto.setStudentName("Error"); // Indicate an error occurred fetching the name
         }
-        
+
+
         if (enrollment.getCourse() != null) {
             dto.setCourseId(enrollment.getCourse().getId());
             dto.setCourseCode(enrollment.getCourse().getCourseCode());
             dto.setCourseTitle(enrollment.getCourse().getTitle());
             // We can set the facultyId in the DTO if needed, but not the name without a Feign call
-            dto.setFacultyId(enrollment.getCourse().getFacultyId()); 
+            dto.setFacultyId(enrollment.getCourse().getFacultyId());
         }
-        
+
         dto.setEnrollmentDate(enrollment.getEnrollmentDate());
         dto.setGrade(enrollment.getGrade());
         dto.setIsActive(enrollment.getIsActive());
-        
+
         return dto;
     }
 }

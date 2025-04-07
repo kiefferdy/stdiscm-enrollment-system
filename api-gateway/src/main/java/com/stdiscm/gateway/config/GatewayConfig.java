@@ -31,7 +31,8 @@ public class GatewayConfig {
                         ))
                         .uri("lb://course-service"))
                 .route("grade-service", r -> r.path("/api/grades/**")
-                        .filters(f -> f.filter(authFilter.apply(new AuthFilter.Config())))
+                        // Use createConfig() to ensure excludedUrls list is initialized
+                        .filters(f -> f.filter(authFilter.apply(createConfig()))) 
                         .uri("lb://grade-service"))
                 .route("frontend-service", r -> r.path("/**")
                         .uri("lb://frontend-service"))
