@@ -8,11 +8,9 @@ metadata:
     io.kompose.service: frontend-service
   name: frontend-service
 spec:
-  type: NodePort
   ports:
     - name: "8084"
       port: 8084
       targetPort: 8084
-      nodePort: 30080
   selector:
     io.kompose.service: frontend-service
