@@ -121,10 +121,12 @@
         </div>
     </div>
     
-    <script src="/js/auth.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Check if user is authenticated and has faculty role
+    <!-- Move page-specific script into the correct layout fragment -->
+    <th:block layout:fragment="page-scripts">
+        <script src="/js/auth.js"></script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Check if user is authenticated and has faculty role
             if (!requireAuth()) return;
             
             if (!hasRole('FACULTY')) {
@@ -318,6 +320,7 @@
                 }, 5000);
             }
         });
-    </script>
+        </script>
+    </th:block>
 </body>
 </html>

@@ -70,18 +70,6 @@ The system is composed of multiple services, each running on its own node:
 - API Gateway: http://localhost:8080
 - Eureka Dashboard: http://localhost:8761
 
-## Default Users
-
-The system will automatically create the following users on startup:
-
-- Student:
-  - Username: student
-  - Password: password
-
-- Faculty:
-  - Username: faculty
-  - Password: password
-
 ## Project Overview
 
 ### Service Distribution

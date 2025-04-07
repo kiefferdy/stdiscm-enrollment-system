@@ -61,6 +61,4 @@ public class AuthController {
             return ResponseEntity.status(404).body(ApiResponse.error(e.getMessage()));
         }
     }
-    
-    // TODO: Add endpoints for updating user profile, listing users (admin), etc. if needed
 }
