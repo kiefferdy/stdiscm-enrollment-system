@@ -2,7 +2,7 @@ package com.stdiscm.course.controller;
 
 import com.stdiscm.common.dto.ApiResponse;
 import com.stdiscm.common.dto.CourseDto;
-import com.stdiscm.common.model.User;
+// import com.stdiscm.common.model.User; // No longer needed directly here
 import com.stdiscm.course.service.CourseService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -53,10 +53,14 @@ public class CourseController {
         List<CourseDto> courses = courseService.getCoursesByFacultyId(facultyId);
         return ResponseEntity.ok(ApiResponse.success("Faculty courses retrieved successfully", courses));
     }
-    
+
     @PostMapping
-    public ResponseEntity<?> createCourse(@Valid @RequestBody CourseDto courseDto, @RequestAttribute("user") User user) {
-        CourseDto createdCourse = courseService.createCourse(courseDto, user);
+    public ResponseEntity<?> createCourse(@Valid @RequestBody CourseDto courseDto, @RequestHeader("X-User-Id") Long userId) {
+        System.out.println("--- CourseController.createCourse ENTERED ---"); // Log entry into controller method
+        System.out.println("--- Received DTO: " + courseDto);
+        System.out.println("--- Received User ID: " + userId);
+        CourseDto createdCourse = courseService.createCourse(courseDto, userId); 
+        System.out.println("--- CourseService.createCourse finished ---");
         return ResponseEntity.ok(ApiResponse.success("Course created successfully", createdCourse));
     }
     

@@ -162,9 +162,14 @@
         </div>
     </div>
     
-    <script src="/js/auth.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
+    <!-- Move page-specific script into the correct layout fragment -->
+    <th:block layout:fragment="page-scripts">
+        <script src="/js/auth.js"></script> 
+        <script>
+            // Removed logging
+            document.addEventListener('DOMContentLoaded', function() {
+            // Removed logging
+            
             // Check if user is authenticated and has faculty role
             if (!requireAuth()) return;
             
@@ -174,15 +179,21 @@
             }
             
             const userId = localStorage.getItem('userId');
+            const API_BASE_URL = 'http://localhost:8080'; // Define API Gateway base URL
             
             loadFacultyCourses();
             
             // Add course form submission
-            document.getElementById('saveNewCourse').addEventListener('click', function() {
-                const form = document.getElementById('addCourseForm');
-                if (form.checkValidity()) {
-                    const courseData = {
-                        courseCode: document.getElementById('courseCode').value,
+            const saveButton = document.getElementById('saveNewCourse');
+            if (saveButton) {
+                // Removed logging
+                saveButton.addEventListener('click', function() { 
+                    // Removed logging
+                    const form = document.getElementById('addCourseForm');
+                    if (form.checkValidity()) { 
+                        // Removed logging
+                        const courseData = {
+                            courseCode: document.getElementById('courseCode').value,
                         title: document.getElementById('title').value,
                         description: document.getElementById('description').value,
                         credits: parseInt(document.getElementById('credits').value),
@@ -190,8 +201,11 @@
                         isOpen: true
                     };
                     
-                    axios.post('/api/courses', courseData)
+                    // Removed logging
+                    // Removed logging
+                    axios.post(`${API_BASE_URL}/api/courses`, courseData) 
                         .then(function(response) {
+                            // Removed logging
                             if (response.data.success) {
                                 showSuccess('Course created successfully');
                                 form.reset();
@@ -205,17 +219,21 @@
                             }
                         })
                         .catch(function(error) {
+                            console.error("axios.post failed:", error); // Keep error logging
                             if (error.response && error.response.data) {
                                 showError(error.response.data.message);
                             } else {
                                 showError('Failed to create course. Please try again.');
                             }
-                            console.error(error);
                         });
-                } else {
-                    form.reportValidity();
-                }
-            });
+                    } else { 
+                        // Removed logging
+                        form.reportValidity();
+                    } 
+                }); 
+            } else { 
+                console.error("Save button (#saveNewCourse) not found!"); // Keep error logging
+            } 
             
             // Update course form submission
             document.getElementById('updateCourse').addEventListener('click', function() {
@@ -231,7 +249,7 @@
                         isOpen: document.getElementById('editIsOpen').checked
                     };
                     
-                    axios.put(`/api/courses/${courseId}`, courseData)
+                    axios.put(`${API_BASE_URL}/api/courses/${courseId}`, courseData) // Use base URL
                         .then(function(response) {
                             if (response.data.success) {
                                 showSuccess('Course updated successfully');
@@ -259,7 +277,7 @@
             });
             
             function loadFacultyCourses() {
-                axios.get(`/api/courses/faculty/${userId}`)
+                axios.get(`${API_BASE_URL}/api/courses/faculty/${userId}`) // Use base URL
                     .then(function(response) {
                         if (response.data.success) {
                             displayCourses(response.data.data);
@@ -317,7 +335,7 @@
             
             // Global functions for course actions
             window.editCourse = function(courseId) {
-                axios.get(`/api/courses/${courseId}`)
+                axios.get(`${API_BASE_URL}/api/courses/${courseId}`) // Use base URL
                     .then(function(response) {
                         if (response.data.success) {
                             const course = response.data.data;
@@ -344,7 +362,7 @@
             };
             
             window.toggleCourseStatus = function(courseId) {
-                axios.put(`/api/courses/${courseId}/toggle-status`)
+                axios.put(`${API_BASE_URL}/api/courses/${courseId}/toggle-status`) // Use base URL
                     .then(function(response) {
                         if (response.data.success) {
                             showSuccess(response.data.message);
@@ -361,7 +379,7 @@
             
             window.deleteCourse = function(courseId) {
                 if (confirm('Are you sure you want to delete this course? This action cannot be undone.')) {
-                    axios.delete(`/api/courses/${courseId}`)
+                    axios.delete(`${API_BASE_URL}/api/courses/${courseId}`) // Use base URL
                         .then(function(response) {
                             if (response.data.success) {
                                 showSuccess(response.data.message);
@@ -407,6 +425,9 @@
                 }, 5000);
             }
         });
-    </script>
+        </script>
+    </th:block>
+</body>
+</html>
 </body>
 </html>

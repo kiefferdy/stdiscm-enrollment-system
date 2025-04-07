@@ -2,12 +2,14 @@ package com.stdiscm.course.controller;
 
 import com.stdiscm.common.dto.ApiResponse;
 import com.stdiscm.common.dto.EnrollmentDto;
-import com.stdiscm.common.model.User;
+// import com.stdiscm.common.model.User; // No longer needed directly
 import com.stdiscm.course.service.EnrollmentService;
+import com.stdiscm.common.dto.GradeSubmissionDto; // Import GradeSubmissionDto
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid; // Import Valid
 import java.util.List;
 
 @RestController
@@ -36,14 +38,43 @@ public class EnrollmentController {
     }
     
     @PostMapping("/enroll/{courseId}")
-    public ResponseEntity<?> enrollStudent(@PathVariable Long courseId, @RequestAttribute("user") User student) {
-        EnrollmentDto enrollment = enrollmentService.enrollStudent(courseId, student);
+    public ResponseEntity<?> enrollStudent(@PathVariable Long courseId, @RequestHeader("X-User-Id") Long studentId) {
+        EnrollmentDto enrollment = enrollmentService.enrollStudent(courseId, studentId); 
         return ResponseEntity.ok(ApiResponse.success("Student enrolled successfully", enrollment));
     }
     
     @PostMapping("/drop/{enrollmentId}")
-    public ResponseEntity<?> dropEnrollment(@PathVariable Long enrollmentId, @RequestAttribute("user") User student) {
-        enrollmentService.dropEnrollment(enrollmentId, student.getId());
+    public ResponseEntity<?> dropEnrollment(@PathVariable Long enrollmentId, @RequestHeader("X-User-Id") Long studentId) {
+        // Service method already accepts studentId, so this change is straightforward
+        enrollmentService.dropEnrollment(enrollmentId, studentId); 
         return ResponseEntity.ok(ApiResponse.success("Enrollment dropped successfully"));
+    }
+
+    // New endpoint for updating grade
+    @PutMapping("/grade")
+    public ResponseEntity<?> updateGrade(@Valid @RequestBody GradeSubmissionDto gradeSubmissionDto,
+                                         @RequestHeader("X-User-Id") Long facultyId) {
+        EnrollmentDto updatedEnrollment = enrollmentService.updateGrade(gradeSubmissionDto, facultyId);
+        return ResponseEntity.ok(ApiResponse.success("Grade updated successfully", updatedEnrollment));
+    }
+
+    // --- Endpoints for fetching GRADED enrollments ---
+
+    @GetMapping("/student/{studentId}/graded")
+    public ResponseEntity<?> getGradedEnrollmentsByStudentId(@PathVariable Long studentId) {
+        List<EnrollmentDto> enrollments = enrollmentService.getGradedEnrollmentsByStudentId(studentId);
+        return ResponseEntity.ok(ApiResponse.success("Graded student enrollments retrieved successfully", enrollments));
+    }
+
+    @GetMapping("/course/{courseId}/graded")
+    public ResponseEntity<?> getGradedEnrollmentsByCourseId(@PathVariable Long courseId) {
+        List<EnrollmentDto> enrollments = enrollmentService.getGradedEnrollmentsByCourseId(courseId);
+        return ResponseEntity.ok(ApiResponse.success("Graded course enrollments retrieved successfully", enrollments));
+    }
+
+    @GetMapping("/faculty/{facultyId}/graded")
+    public ResponseEntity<?> getGradedEnrollmentsByFacultyId(@PathVariable Long facultyId) {
+        List<EnrollmentDto> enrollments = enrollmentService.getGradedEnrollmentsByFacultyId(facultyId);
+        return ResponseEntity.ok(ApiResponse.success("Graded faculty enrollments retrieved successfully", enrollments));
     }
 }

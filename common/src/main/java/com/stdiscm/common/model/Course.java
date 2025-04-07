@@ -38,10 +38,13 @@ public class Course implements Serializable {
     
     @Column(nullable = false)
     private Boolean isOpen;
+
+    // Store only the ID, remove the direct relationship
+    @Column(name = "faculty_id") // Keep column name consistent
+    private Long facultyId; 
     
-    @ManyToOne
-    @JoinColumn(name = "faculty_id")
-    private User faculty;
+    // Remove the User faculty field
+    // private User faculty; 
     
     public boolean hasAvailableSlots() {
         return this.isOpen && this.enrolled < this.capacity;

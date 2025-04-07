@@ -12,13 +12,16 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
 
 @RestController
-@RequestMapping("/api/auth")
+// Changed base path to /api/users for clarity, keeping /api/auth for auth operations
+@RequestMapping("/api") 
 public class AuthController {
     
     @Autowired
     private AuthService authService;
+
+    // --- Authentication Endpoints ---
     
-    @PostMapping("/login")
+    @PostMapping("/auth/login") // Updated path
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
         try {
             JwtResponse jwtResponse = authService.authenticateUser(loginRequest);
@@ -28,7 +31,7 @@ public class AuthController {
         }
     }
     
-    @PostMapping("/register")
+    @PostMapping("/auth/register") // Updated path
     public ResponseEntity<?> registerUser(@Valid @RequestBody User user) {
         try {
             User createdUser = authService.createUser(user);
@@ -38,8 +41,26 @@ public class AuthController {
         }
     }
     
-    @GetMapping("/validate")
+    @GetMapping("/auth/validate") // Updated path
     public ResponseEntity<?> validateToken() {
-        return ResponseEntity.ok(ApiResponse.success("Token is valid"));
+        // This endpoint might need more logic depending on how validation is intended
+        return ResponseEntity.ok(ApiResponse.success("Token is valid")); 
     }
+
+    // --- User Management Endpoints ---
+
+    @GetMapping("/users/{id}")
+    public ResponseEntity<?> getUserById(@PathVariable Long id) {
+        try {
+            User user = authService.findUserById(id);
+            // Avoid sending password hash back
+            user.setPassword(null); 
+            return ResponseEntity.ok(ApiResponse.success("User retrieved successfully", user));
+        } catch (Exception e) {
+            // Assuming ResourceNotFoundException is thrown by the service
+            return ResponseEntity.status(404).body(ApiResponse.error(e.getMessage()));
+        }
+    }
+    
+    // TODO: Add endpoints for updating user profile, listing users (admin), etc. if needed
 }

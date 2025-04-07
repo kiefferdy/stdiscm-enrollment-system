@@ -11,6 +11,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import com.stdiscm.common.exception.ResourceNotFoundException; // Import exception
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -38,10 +39,13 @@ public class AuthService {
         
         SecurityContextHolder.getContext().setAuthentication(authentication);
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        String jwt = jwtService.generateToken(userDetails);
         
+        // Fetch the full User object to get ID and roles
         User user = userRepository.findByUsername(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("User not found after authentication: " + userDetails.getUsername()));
+
+        // Generate token including the user ID claim
+        String jwt = jwtService.generateTokenWithUserId(userDetails, user.getId()); 
         
         List<String> roles = user.getRoles().stream()
                 .collect(Collectors.toList());
@@ -60,5 +64,11 @@ public class AuthService {
         
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         return userRepository.save(user);
+    }
+    
+    // New method to find user by ID
+    public User findUserById(Long id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
     }
 }

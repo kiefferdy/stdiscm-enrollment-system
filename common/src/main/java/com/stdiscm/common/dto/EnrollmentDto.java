@@ -18,6 +18,7 @@ public class EnrollmentDto implements Serializable {
     private Long courseId;
     private String courseCode;
     private String courseTitle;
+    private Long facultyId; // Add facultyId field
     private LocalDateTime enrollmentDate;
     private String grade;
     private Boolean isActive;

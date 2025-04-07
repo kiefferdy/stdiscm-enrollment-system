@@ -4,7 +4,7 @@ import com.stdiscm.common.dto.CourseDto;
 import com.stdiscm.common.exception.BadRequestException;
 import com.stdiscm.common.exception.ResourceNotFoundException;
 import com.stdiscm.common.model.Course;
-import com.stdiscm.common.model.User;
+import com.stdiscm.course.client.AuthServiceClient;
 import com.stdiscm.course.repository.CourseRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -18,6 +18,10 @@ public class CourseService {
     
     @Autowired
     private CourseRepository courseRepository;
+
+    @Autowired
+    @SuppressWarnings("unused") // Suppress warning - Client is used by EnrollmentService in the same context
+    private AuthServiceClient authServiceClient; 
     
     public List<CourseDto> getAllCourses() {
         return courseRepository.findAll().stream()
@@ -50,22 +54,35 @@ public class CourseService {
     }
     
     @Transactional
-    public CourseDto createCourse(CourseDto courseDto, User faculty) {
+    public CourseDto createCourse(CourseDto courseDto, Long facultyId) { 
+        System.out.println(">>> createCourse started. DTO: " + courseDto + ", Faculty ID: " + facultyId); // Log 1
+
+        // 1. Check if course code already exists
+        System.out.println(">>> Checking if course code exists: " + courseDto.getCourseCode()); // Log 2
         if (courseRepository.existsByCourseCode(courseDto.getCourseCode())) {
-            throw new BadRequestException("Course code already exists");
+            System.out.println(">>> Course code already exists. Throwing BadRequestException."); // Log 3
+            throw new BadRequestException("Course code already exists: " + courseDto.getCourseCode());
         }
-        
+        System.out.println(">>> Course code does not exist. Proceeding..."); // Log 4
+
+        // 2. No need to fetch User object anymore, just use the facultyId directly
+
+        // 3. Create and save the course
+        System.out.println(">>> Creating Course entity..."); // Log 11
         Course course = new Course();
         course.setCourseCode(courseDto.getCourseCode());
         course.setTitle(courseDto.getTitle());
         course.setDescription(courseDto.getDescription());
         course.setCredits(courseDto.getCredits());
         course.setCapacity(courseDto.getCapacity());
-        course.setEnrolled(0);
-        course.setIsOpen(true);
-        course.setFaculty(faculty);
+        course.setEnrolled(0); 
+        course.setIsOpen(true); 
+        course.setFacultyId(facultyId); // Set the faculty ID directly
         
+        System.out.println(">>> Saving Course entity: " + course); // Log 12
         Course savedCourse = courseRepository.save(course);
+        System.out.println(">>> Course saved successfully. ID: " + savedCourse.getId()); // Log 13
+        
         return convertToDto(savedCourse);
     }
     
@@ -150,10 +167,11 @@ public class CourseService {
         dto.setEnrolled(course.getEnrolled());
         dto.setIsOpen(course.getIsOpen());
         
-        if (course.getFaculty() != null) {
-            dto.setFacultyId(course.getFaculty().getId());
-            dto.setFacultyName(course.getFaculty().getFullName());
-        }
+        // Set facultyId directly from the Course entity
+        dto.setFacultyId(course.getFacultyId()); 
+        
+        // Remove setting facultyName - would require a Feign call here
+        // dto.setFacultyName( ... ); 
         
         dto.setHasAvailableSlots(course.hasAvailableSlots());
         

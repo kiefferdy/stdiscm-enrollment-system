@@ -3,7 +3,7 @@ package com.stdiscm.grade.controller;
 import com.stdiscm.common.dto.ApiResponse;
 import com.stdiscm.common.dto.EnrollmentDto;
 import com.stdiscm.common.dto.GradeSubmissionDto;
-import com.stdiscm.common.model.User;
+// import com.stdiscm.common.model.User; // No longer needed directly
 import com.stdiscm.grade.service.GradeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -39,8 +39,9 @@ public class GradeController {
     
     @PostMapping("/submit")
     public ResponseEntity<?> submitGrade(@Valid @RequestBody GradeSubmissionDto gradeSubmissionDto, 
-                                        @RequestAttribute("user") User faculty) {
-        EnrollmentDto updatedEnrollment = gradeService.submitGrade(gradeSubmissionDto, faculty.getId());
+                                        @RequestHeader("X-User-Id") Long facultyId) { // Changed to RequestHeader
+        // Service method already accepts facultyId
+        EnrollmentDto updatedEnrollment = gradeService.submitGrade(gradeSubmissionDto, facultyId); 
         return ResponseEntity.ok(ApiResponse.success("Grade submitted successfully", updatedEnrollment));
     }
 }

@@ -6,13 +6,16 @@ import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SignatureException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.GrantedAuthority; // Import GrantedAuthority
 import org.springframework.stereotype.Service;
 
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List; // Import List
 import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Collectors; // Import Collectors
 
 @Service
 public class JwtService {
@@ -55,9 +58,41 @@ public class JwtService {
     
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
+        
+        // Extract roles from UserDetails authorities
+        List<String> roles = userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.toList());
+        claims.put("roles", roles);
+        
+        // Original generateToken no longer adds userId claim directly
+        // It relies on the caller (AuthService) to use generateTokenWithUserId if ID is needed in claims
+        
+        return createToken(claims, userDetails.getUsername());
+    }
+
+    // Method to generate token accepting user ID explicitly
+    public String generateTokenWithUserId(UserDetails userDetails, Long userId) {
+        Map<String, Object> claims = new HashMap<>();
+        List<String> roles = userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.toList());
+        claims.put("roles", roles);
+        claims.put("userId", userId); // Add user ID claim
         return createToken(claims, userDetails.getUsername());
     }
     
+    // Overload createToken to accept UserDetails directly for convenience (optional) - Keep commented out
+    // public String generateToken(UserDetails userDetails) {
+    //     Map<String, Object> claims = new HashMap<>();
+    //     List<String> roles = userDetails.getAuthorities().stream()
+    //             .map(GrantedAuthority::getAuthority)
+    //             .collect(Collectors.toList());
+    //     claims.put("roles", roles);
+    //     // Add other claims if needed
+    //     return createToken(claims, userDetails.getUsername());
+    // }
+
     private String createToken(Map<String, Object> claims, String subject) {
         return Jwts.builder()
                 .setClaims(claims)

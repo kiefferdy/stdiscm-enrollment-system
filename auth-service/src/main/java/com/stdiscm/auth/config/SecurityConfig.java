@@ -14,14 +14,18 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter; // Import filter
 
 @Configuration
 @EnableWebSecurity
-@EnableGlobalMethodSecurity(prePostEnabled = true)
+@EnableGlobalMethodSecurity(prePostEnabled = true) 
 public class SecurityConfig {
     
     @Autowired
     private UserDetailsServiceImpl userDetailsService;
+
+    @Autowired
+    private JwtAuthFilter jwtAuthFilter; // Inject the JWT filter
     
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
@@ -36,12 +40,17 @@ public class SecurityConfig {
         // Removed .cors().and()
         http.csrf().disable() 
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS).and()
-                .authorizeRequests()
-                .antMatchers("/api/auth/**").permitAll()
-                .antMatchers("/actuator/**").permitAll()
-                .anyRequest().authenticated();
+                .authorizeRequests(authorize -> authorize
+                    .antMatchers("/api/auth/**").permitAll() // Public auth endpoints
+                    .antMatchers("/actuator/**").permitAll() // Public actuator endpoints
+                    .antMatchers("/api/users/**").authenticated() // Revert back to authenticated
+                    .anyRequest().authenticated() // Secure all other endpoints by default
+                );
         
         http.authenticationProvider(authenticationProvider());
+        
+        // Add JWT filter before the standard authentication filter
+        http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         
         return http.build();
     }

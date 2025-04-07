@@ -15,6 +15,7 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 import java.security.Key;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
 
@@ -54,16 +55,40 @@ public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> 
                 String token = authHeader.substring(BEARER_PREFIX.length());
                 
                 try {
-                    validateToken(token);
+                    Claims claims = validateToken(token);
+                    // Extract numeric userId from the "userId" claim
+                    Long userId = claims.get("userId", Long.class); 
+                    if (userId == null) {
+                        // Handle case where userId claim is missing or not a Long (shouldn't happen if JwtService is correct)
+                        return onError(exchange, "Invalid JWT token: Missing or invalid userId claim", HttpStatus.UNAUTHORIZED);
+                    }
                     
-                    // You could extract user roles here and decide whether to forward based on those
+                    // Extract roles from the "roles" claim
+                    @SuppressWarnings("unchecked") // Suppress warning for unchecked cast
+                    List<String> roles = claims.get("roles", List.class); 
+                    if (roles == null) {
+                        roles = new ArrayList<>(); // Default to empty list if roles claim is missing
+                    }
+
+                    // Add user info as headers to the downstream request
+                    ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
+                            .header("X-User-Id", String.valueOf(userId)) // Convert Long userId to String for header
+                            .header("X-User-Roles", String.join(",", roles)) // Join roles into a comma-separated string
+                            .build();
                     
+                    ServerWebExchange mutatedExchange = exchange.mutate().request(mutatedRequest).build();
+                    
+                    return chain.filter(mutatedExchange); // Pass the mutated exchange down the chain
+
                 } catch (Exception e) {
-                    return onError(exchange, "Invalid JWT token: " + e.getMessage(), HttpStatus.UNAUTHORIZED);
+                    // Log the error for debugging purposes
+                    // logger.error("JWT Validation Error: {}", e.getMessage()); 
+                    return onError(exchange, "Invalid or expired JWT token", HttpStatus.UNAUTHORIZED); // More generic message
                 }
+            } else {
+                // If the request is for an excluded URL, just pass it through
+                return chain.filter(exchange);
             }
-            
-            return chain.filter(exchange);
         };
     }
 
