@@ -61,6 +61,11 @@
     <th:block layout:fragment="page-scripts">
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Redirect if already logged in
+            if (redirectIfAuthenticated()) {
+                return; // Stop further execution if redirected
+            }
+
             const registerButton = document.getElementById('registerButton'); // Get button instead of form
             const registerError = document.getElementById('registerError');
             const registerSuccess = document.getElementById('registerSuccess');

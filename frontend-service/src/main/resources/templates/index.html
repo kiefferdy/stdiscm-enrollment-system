@@ -12,7 +12,7 @@
                 <p class="lead">A distributed system for course enrollment and grade management</p>
             </div>
         </div>
-        
+
         <div class="row mt-5">
             <div class="col-md-4">
                 <div class="card">
@@ -42,7 +42,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="row mt-5">
             <div class="col-md-6 offset-md-3 text-center">
                 <div id="guestActions">
@@ -58,18 +58,27 @@
             </div>
         </div>
     </div>
-    
+
+    <th:block layout:fragment="page-scripts">
     <script>
+        // This script runs specifically on the index page
         document.addEventListener('DOMContentLoaded', function() {
             const token = localStorage.getItem('token');
-            if (token) {
-                document.getElementById('guestActions').classList.add('d-none');
-                document.getElementById('userActions').classList.remove('d-none');
-            } else {
-                document.getElementById('guestActions').classList.remove('d-none');
-                document.getElementById('userActions').classList.add('d-none');
+
+            const guestActions = document.getElementById('guestActions');
+            const userActions = document.getElementById('userActions');
+
+            if (guestActions && userActions) { // Check elements exist
+                if (token) {
+                    guestActions.classList.add('d-none');
+                    userActions.classList.remove('d-none');
+                } else {
+                    guestActions.classList.remove('d-none');
+                    userActions.classList.add('d-none');
+                }
             }
         });
     </script>
+    </th:block>
 </body>
 </html>

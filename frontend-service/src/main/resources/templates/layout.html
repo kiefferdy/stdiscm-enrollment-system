@@ -89,49 +89,70 @@
         </div>
     </footer>
 
-    <script src="/js/auth.js"></script> <!-- Added auth.js script -->
+    <script src="/js/auth.js"></script>
     <script>
-        // Check if user is logged in
-        document.addEventListener('DOMContentLoaded', function() {
+        // Function to update UI based on auth state
+        function updateUIBasedOnAuthState() {
             const token = localStorage.getItem('token');
             const userRoles = JSON.parse(localStorage.getItem('userRoles') || '[]');
-            
+
+            const loginLink = document.getElementById('loginLink');
+            const registerLink = document.getElementById('registerLink');
+            const logoutLink = document.getElementById('logoutLink');
+            const dashboardLink = document.getElementById('dashboardLink');
+            const coursesLink = document.getElementById('coursesLink');
+            const enrollmentsLink = document.getElementById('enrollmentsLink');
+            const gradesLink = document.getElementById('gradesLink');
+            const facultyDropdown = document.getElementById('facultyDropdown');
+
             if (token) {
                 // User is logged in
-                document.getElementById('loginLink').classList.add('d-none');
-                document.getElementById('registerLink').classList.add('d-none');
-                document.getElementById('logoutLink').classList.remove('d-none');
-                
-                // Show dashboard, courses, enrollments, and grades links
-                document.getElementById('dashboardLink').classList.remove('d-none');
-                document.getElementById('coursesLink').classList.remove('d-none');
-                document.getElementById('enrollmentsLink').classList.remove('d-none');
-                document.getElementById('gradesLink').classList.remove('d-none');
-                
+                if (loginLink) loginLink.classList.add('d-none');
+                if (registerLink) registerLink.classList.add('d-none');
+                if (logoutLink) logoutLink.classList.remove('d-none');
+
+                // Show relevant links
+                if (dashboardLink) dashboardLink.classList.remove('d-none');
+                if (coursesLink) coursesLink.classList.remove('d-none');
+                if (enrollmentsLink) enrollmentsLink.classList.remove('d-none');
+                if (gradesLink) gradesLink.classList.remove('d-none');
+
                 // Show faculty dropdown if user has FACULTY role
-                if (userRoles.includes('FACULTY')) {
-                    document.getElementById('facultyDropdown').classList.remove('d-none');
+                if (userRoles.includes('FACULTY') && facultyDropdown) {
+                    facultyDropdown.classList.remove('d-none');
+                } else if (facultyDropdown) {
+                     facultyDropdown.classList.add('d-none'); // Ensure it's hidden otherwise
                 }
+
             } else {
                 // User is not logged in
-                document.getElementById('loginLink').classList.remove('d-none');
-                document.getElementById('registerLink').classList.remove('d-none');
-                document.getElementById('logoutLink').classList.add('d-none');
-                
-                // Hide dashboard, courses, enrollments, and grades links
-                document.getElementById('dashboardLink').classList.add('d-none');
-                document.getElementById('coursesLink').classList.add('d-none');
-                document.getElementById('enrollmentsLink').classList.add('d-none');
-                document.getElementById('gradesLink').classList.add('d-none');
-                document.getElementById('facultyDropdown').classList.add('d-none');
+                if (loginLink) loginLink.classList.remove('d-none');
+                if (registerLink) registerLink.classList.remove('d-none');
+                if (logoutLink) logoutLink.classList.add('d-none');
+
+                // Hide protected links
+                if (dashboardLink) dashboardLink.classList.add('d-none');
+                if (coursesLink) coursesLink.classList.add('d-none');
+                if (enrollmentsLink) enrollmentsLink.classList.add('d-none');
+                if (gradesLink) gradesLink.classList.add('d-none');
+                if (facultyDropdown) facultyDropdown.classList.add('d-none');
             }
-        });
-        
+        }
+
+        // Run on initial load
+        document.addEventListener('DOMContentLoaded', updateUIBasedOnAuthState);
+
+        // Optional: Re-check on window focus in case localStorage changed in another tab
+        // window.addEventListener('focus', updateUIBasedOnAuthState);
+
+        // Logout function
         function logout() {
             localStorage.removeItem('token');
             localStorage.removeItem('userId');
             localStorage.removeItem('username');
             localStorage.removeItem('userRoles');
+            // Update UI immediately after logout before redirecting
+            updateUIBasedOnAuthState();
             window.location.href = '/';
         }
     </script>

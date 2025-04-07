@@ -37,6 +37,11 @@
     <th:block layout:fragment="page-scripts">
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Redirect if already logged in
+            if (redirectIfAuthenticated()) {
+                return; // Stop further execution if redirected
+            }
+
             const loginButton = document.getElementById('loginButton'); // Get button instead of form
             const loginError = document.getElementById('loginError');
             const loginForm = document.getElementById('loginForm'); // Re-add form retrieval
