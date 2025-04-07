@@ -135,10 +135,10 @@
             }
             
             const userId = localStorage.getItem('userId');
-            
+            const API_BASE_URL = 'http://localhost:8080';
             // Load faculty courses for the dropdown
             loadFacultyCourses();
-            
+
             // Course selection change event
             document.getElementById('courseSelect').addEventListener('change', function() {
                 const courseId = this.value;
@@ -160,7 +160,7 @@
                         grade: document.getElementById('grade').value
                     };
                     
-                    axios.post('/api/grades/submit', gradeData)
+                    axios.post(`${API_BASE_URL}/api/grades/submit`, gradeData)
                         .then(function(response) {
                             if (response.data.success) {
                                 showSuccess('Grade submitted successfully');
@@ -192,7 +192,7 @@
             });
             
             function loadFacultyCourses() {
-                axios.get(`/api/courses/faculty/${userId}`)
+                axios.get(`${API_BASE_URL}/api/courses/faculty/${userId}`)
                     .then(function(response) {
                         if (response.data.success) {
                             populateCourseDropdown(response.data.data);
@@ -223,7 +223,7 @@
             }
             
             function loadCourseEnrollments(courseId) {
-                axios.get(`/api/courses/enrollments/course/${courseId}`)
+                axios.get(`${API_BASE_URL}/api/courses/enrollments/course/${courseId}`)
                     .then(function(response) {
                         if (response.data.success) {
                             displayEnrollments(response.data.data);
