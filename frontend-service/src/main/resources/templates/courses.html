@@ -79,14 +79,16 @@
                     });
             }
             
-            function displayCourses(courses) {
+           function displayCourses(courses) {
                 const courseList = document.getElementById('courseList');
-                
+                const userRoles = JSON.parse(localStorage.getItem('userRoles') || '[]');
+                const isFaculty = userRoles.includes('FACULTY');
+
                 if (courses.length === 0) {
                     courseList.innerHTML = '<tr><td colspan="7" class="text-center">No courses available at the moment.</td></tr>';
                     return;
                 }
-                
+
                 let html = '';
                 courses.forEach(course => {
                     html += `
@@ -97,19 +99,21 @@
                             <td>${course.credits}</td>
                             <td>${course.facultyName || 'N/A'}</td>
                             <td>
-                                ${course.hasAvailableSlots 
-                                    ? `<span class="badge bg-success">Available (${course.enrolled}/${course.capacity})</span>` 
+                                ${course.hasAvailableSlots
+                                    ? `<span class="badge bg-success">Available (${course.enrolled}/${course.capacity})</span>`
                                     : `<span class="badge bg-danger">Full (${course.enrolled}/${course.capacity})</span>`}
                             </td>
                             <td>
-                                ${course.hasAvailableSlots 
-                                    ? `<button class="btn btn-sm btn-primary" onclick="enrollCourse(${course.id})">Enroll</button>` 
-                                    : `<button class="btn btn-sm btn-secondary" disabled>Full</button>`}
+                                ${isFaculty
+                                    ? `<button class="btn btn-sm btn-secondary" disabled>Faculty Cannot Enroll</button>`
+                                    : (course.hasAvailableSlots
+                                        ? `<button class="btn btn-sm btn-primary" onclick="enrollCourse(${course.id})">Enroll</button>`
+                                        : `<button class="btn btn-sm btn-secondary" disabled>Full</button>`)}
                             </td>
                         </tr>
                     `;
                 });
-                
+
                 courseList.innerHTML = html;
             }
             
