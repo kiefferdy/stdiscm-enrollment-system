@@ -25,7 +25,7 @@ spec:
             - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
               value: http://discovery-service:8761/eureka/
             - name: SPRING_DATASOURCE_URL
-              value: jdbc:mysql://db-primary:3306/enrollment_course?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+              value: jdbc:mysql://db-primary:3308/enrollment_auth?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
             - name: SPRING_PROFILES_ACTIVE
               value: docker
           image: library/stdiscm-enrollment-system-course-service:latest
@@ -34,4 +34,22 @@ spec:
           ports:
             - containerPort: 8082
               protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8082
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            failureThreshold: 5
+            timeoutSeconds: 5
+
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8082
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            failureThreshold: 5
+            timeoutSeconds: 5
+
       restartPolicy: Always
