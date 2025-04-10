@@ -34,7 +34,7 @@ public class EnrollmentService {
     private CourseService courseService;
 
     @Autowired
-    private AuthServiceClient authServiceClient; // Inject Feign Client
+    private AuthServiceClient authServiceClient;
 
     public List<EnrollmentDto> getEnrollmentsByStudentId(Long studentId) {
         // Use explicit query from repository
@@ -62,6 +62,10 @@ public class EnrollmentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Course", "id", courseId));
 
         // 2. Perform validation checks
+        if (course.getFacultyId() != null && course.getFacultyId().equals(studentId)) {
+            throw new BadRequestException("Faculty members cannot enroll in their own courses");
+        }
+
         if (!course.getIsOpen()) {
             throw new BadRequestException("Course is not open for enrollment");
         }
@@ -92,7 +96,7 @@ public class EnrollmentService {
         } else {
             // 4. Create and save NEW enrollment if none exists
             Enrollment enrollment = new Enrollment();
-            enrollment.setStudentId(studentId); // Set studentId directly
+            enrollment.setStudentId(studentId);
             enrollment.setCourse(course);
             enrollment.setEnrollmentDate(LocalDateTime.now());
             enrollment.setIsActive(true);
@@ -130,7 +134,6 @@ public class EnrollmentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Enrollment", "id", gradeSubmissionDto.getEnrollmentId()));
 
         // 2. Authorization Check: Ensure the faculty submitting the grade is assigned to the course
-        // Use facultyId directly from the Course object
         if (enrollment.getCourse() == null || enrollment.getCourse().getFacultyId() == null ||
             !enrollment.getCourse().getFacultyId().equals(facultyId)) {
             throw new BadRequestException("Faculty not authorized to submit grade for this course enrollment.");

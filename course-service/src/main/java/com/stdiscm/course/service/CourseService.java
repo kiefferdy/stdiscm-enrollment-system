@@ -1,16 +1,22 @@
 package com.stdiscm.course.service;
 
 import com.stdiscm.common.dto.CourseDto;
+import com.stdiscm.common.dto.ApiResponse;
 import com.stdiscm.common.exception.BadRequestException;
 import com.stdiscm.common.exception.ResourceNotFoundException;
 import com.stdiscm.common.model.Course;
+import com.stdiscm.common.model.User;
 import com.stdiscm.course.client.AuthServiceClient;
 import com.stdiscm.course.repository.CourseRepository;
+import com.stdiscm.course.repository.EnrollmentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -20,8 +26,10 @@ public class CourseService {
     private CourseRepository courseRepository;
 
     @Autowired
-    @SuppressWarnings("unused") // Suppress warning - Client is used by EnrollmentService in the same context
-    private AuthServiceClient authServiceClient; 
+    private EnrollmentRepository enrollmentRepository;
+
+    @Autowired
+    private AuthServiceClient authServiceClient;
     
     public List<CourseDto> getAllCourses() {
         return courseRepository.findAll().stream()
@@ -29,9 +37,22 @@ public class CourseService {
                 .collect(Collectors.toList());
     }
     
-    public List<CourseDto> getOpenCourses() {
-        return courseRepository.findByIsOpenTrue().stream()
-                .map(this::convertToDto)
+    // Updated to accept studentId to check enrollment status
+    public List<CourseDto> getOpenCourses(Long studentId) {
+        // 1. Fetch all open courses
+        List<Course> openCourses = courseRepository.findByIsOpenTrue();
+
+        // 2. Fetch the IDs of courses the student is actively enrolled in, only if studentId is provided
+        final Set<Long> finalEnrolledCourseIds;
+        if (studentId != null) {
+            finalEnrolledCourseIds = enrollmentRepository.findActiveCourseIdsByStudentId(studentId);
+        } else {
+            finalEnrolledCourseIds = Collections.emptySet();
+        }
+
+        // 3. Convert to DTO, passing the final set of enrolled IDs
+        return openCourses.stream()
+                .map(course -> convertToDto(course, finalEnrolledCourseIds))
                 .collect(Collectors.toList());
     }
     
@@ -54,21 +75,13 @@ public class CourseService {
     }
     
     @Transactional
-    public CourseDto createCourse(CourseDto courseDto, Long facultyId) { 
-        System.out.println(">>> createCourse started. DTO: " + courseDto + ", Faculty ID: " + facultyId); // Log 1
-
-        // 1. Check if course code already exists
-        System.out.println(">>> Checking if course code exists: " + courseDto.getCourseCode()); // Log 2
+    public CourseDto createCourse(CourseDto courseDto, Long facultyId) {
+        // Check if course code already exists
         if (courseRepository.existsByCourseCode(courseDto.getCourseCode())) {
-            System.out.println(">>> Course code already exists. Throwing BadRequestException."); // Log 3
             throw new BadRequestException("Course code already exists: " + courseDto.getCourseCode());
         }
-        System.out.println(">>> Course code does not exist. Proceeding..."); // Log 4
 
-        // 2. No need to fetch User object anymore, just use the facultyId directly
-
-        // 3. Create and save the course
-        System.out.println(">>> Creating Course entity..."); // Log 11
+        // Create and save the course
         Course course = new Course();
         course.setCourseCode(courseDto.getCourseCode());
         course.setTitle(courseDto.getTitle());
@@ -76,13 +89,10 @@ public class CourseService {
         course.setCredits(courseDto.getCredits());
         course.setCapacity(courseDto.getCapacity());
         course.setEnrolled(0); 
-        course.setIsOpen(true); 
-        course.setFacultyId(facultyId); // Set the faculty ID directly
-        
-        System.out.println(">>> Saving Course entity: " + course); // Log 12
+        course.setIsOpen(true);
+        course.setFacultyId(facultyId);
+
         Course savedCourse = courseRepository.save(course);
-        System.out.println(">>> Course saved successfully. ID: " + savedCourse.getId()); // Log 13
-        
         return convertToDto(savedCourse);
     }
     
@@ -155,8 +165,9 @@ public class CourseService {
             courseRepository.save(course);
         }
     }
-    
-    private CourseDto convertToDto(Course course) {
+
+    // Overloaded method to check enrollment status
+    private CourseDto convertToDto(Course course, Set<Long> enrolledCourseIds) {
         CourseDto dto = new CourseDto();
         dto.setId(course.getId());
         dto.setCourseCode(course.getCourseCode());
@@ -166,15 +177,34 @@ public class CourseService {
         dto.setCapacity(course.getCapacity());
         dto.setEnrolled(course.getEnrolled());
         dto.setIsOpen(course.getIsOpen());
-        
-        // Set facultyId directly from the Course entity
-        dto.setFacultyId(course.getFacultyId()); 
-        
-        // Remove setting facultyName - would require a Feign call here
-        // dto.setFacultyName( ... ); 
+        dto.setFacultyId(course.getFacultyId());
+
+        // Fetch and set facultyName using AuthServiceClient
+        if (course.getFacultyId() != null) {
+            try {
+                ResponseEntity<ApiResponse<User>> response = authServiceClient.getUserById(course.getFacultyId());
+                if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null && response.getBody().getData() != null) {
+                    dto.setFacultyName(response.getBody().getData().getFullName());
+                } else {
+                    dto.setFacultyName("N/A"); 
+                }
+            } catch (Exception e) {
+                dto.setFacultyName("Error");
+            }
+        } else {
+            dto.setFacultyName("N/A");
+        }
         
         dto.setHasAvailableSlots(course.hasAvailableSlots());
-        
+
+        // Set the new flag based on the provided set of enrolled course IDs
+        dto.setCurrentUserEnrolled(enrolledCourseIds != null && enrolledCourseIds.contains(course.getId()));
+
         return dto;
+    }
+
+    // Original method now calls the overloaded one with an empty set
+    private CourseDto convertToDto(Course course) {
+        return convertToDto(course, Collections.emptySet());
     }
 }

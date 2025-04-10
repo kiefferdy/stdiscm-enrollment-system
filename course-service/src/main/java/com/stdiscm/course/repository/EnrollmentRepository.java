@@ -9,11 +9,11 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
 
-    // Use EntityGraph to fetch course eagerly (student is no longer an attribute)
     @Override
     @EntityGraph(attributePaths = {"course"})
     Optional<Enrollment> findById(Long id);
@@ -31,11 +31,14 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
     List<Enrollment> findByCourseId(Long courseId);
 
     // Method to find graded enrollments for a student
-    @Query("SELECT e FROM Enrollment e WHERE e.studentId = :studentId AND e.grade IS NOT NULL") // Use studentId field
-    @EntityGraph(attributePaths = {"course"}) // No longer need to fetch student here
+    @Query("SELECT e FROM Enrollment e WHERE e.studentId = :studentId AND e.grade IS NOT NULL")
+    @EntityGraph(attributePaths = {"course"})
     List<Enrollment> findByStudentIdAndGradeIsNotNull(@Param("studentId") Long studentId);
 
-    // These methods likely don't need the full graph fetched
     Optional<Enrollment> findByStudentIdAndCourseId(Long studentId, Long courseId);
-    boolean existsByStudentIdAndCourseId(Long studentId, Long courseId); // Should still work by convention
+    boolean existsByStudentIdAndCourseId(Long studentId, Long courseId);
+
+    // Method to get IDs of courses a student is actively enrolled in
+    @Query("SELECT e.course.id FROM Enrollment e WHERE e.studentId = :studentId AND e.isActive = true")
+    Set<Long> findActiveCourseIdsByStudentId(@Param("studentId") Long studentId);
 }

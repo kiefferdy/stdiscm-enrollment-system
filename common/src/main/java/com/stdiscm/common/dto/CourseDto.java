@@ -42,4 +42,6 @@ public class CourseDto implements Serializable {
     private Long facultyId;
     
     private Boolean hasAvailableSlots;
+
+    private Boolean currentUserEnrolled;
 }

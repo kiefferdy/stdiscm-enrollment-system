@@ -2,7 +2,6 @@ package com.stdiscm.course.controller;
 
 import com.stdiscm.common.dto.ApiResponse;
 import com.stdiscm.common.dto.CourseDto;
-// import com.stdiscm.common.model.User; // No longer needed directly here
 import com.stdiscm.course.service.CourseService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -24,15 +23,16 @@ public class CourseController {
         return ResponseEntity.ok(ApiResponse.success("Courses retrieved successfully", courses));
     }
     
+    // Updated to accept userId from header
     @GetMapping("/open")
-    public ResponseEntity<?> getOpenCourses() {
-        List<CourseDto> courses = courseService.getOpenCourses();
+    public ResponseEntity<?> getOpenCourses(@RequestHeader("X-User-Id") Long userId) { 
+        List<CourseDto> courses = courseService.getOpenCourses(userId); // Pass userId to service
         return ResponseEntity.ok(ApiResponse.success("Open courses retrieved successfully", courses));
     }
     
     @GetMapping("/public")
     public ResponseEntity<?> getPublicCourseList() {
-        List<CourseDto> courses = courseService.getOpenCourses();
+        List<CourseDto> courses = courseService.getOpenCourses(null); 
         return ResponseEntity.ok(ApiResponse.success("Public course list retrieved successfully", courses));
     }
     

@@ -52,7 +52,6 @@
         </div>
     </div>
 
-    <!-- Move page-specific script into the correct layout fragment -->
     <th:block layout:fragment="page-scripts">
         <script src="/js/auth.js"></script>
         <script>
@@ -60,12 +59,12 @@
             // Check if user is authenticated
             if (!requireAuth()) return;
 
-            const API_BASE_URL = 'http://localhost:8080'; // Define API Gateway base URL
+            const API_BASE_URL = 'http://localhost:8080';
 
             loadCourses();
 
             function loadCourses() {
-                axios.get(`${API_BASE_URL}/api/courses/open`) // Use base URL
+                axios.get(`${API_BASE_URL}/api/courses/open`)
                     .then(function(response) {
                         if (response.data.success) {
                             displayCourses(response.data.data);
@@ -81,7 +80,11 @@
             
             function displayCourses(courses) {
                 const courseList = document.getElementById('courseList');
-                
+                const currentUserIdStr = localStorage.getItem('userId');
+                // Parse the user ID to an integer for proper comparison
+                const currentUserId = currentUserIdStr ? parseInt(currentUserIdStr, 10) : null; 
+                const isFaculty = hasRole('FACULTY'); 
+
                 if (courses.length === 0) {
                     courseList.innerHTML = '<tr><td colspan="7" class="text-center">No courses available at the moment.</td></tr>';
                     return;
@@ -102,24 +105,29 @@
                                     : `<span class="badge bg-danger">Full (${course.enrolled}/${course.capacity})</span>`}
                             </td>
                             <td>
-                                ${course.hasAvailableSlots 
-                                    ? `<button class="btn btn-sm btn-primary" onclick="enrollCourse(${course.id})">Enroll</button>` 
-                                    : `<button class="btn btn-sm btn-secondary" disabled>Full</button>`}
+                                ${!course.hasAvailableSlots
+                                    ? `<button class="btn btn-sm btn-secondary" disabled>Full</button>` // Course is full
+                                    : course.currentUserEnrolled // Check if current user is enrolled
+                                        ? `<button class="btn btn-sm btn-success" disabled>Enrolled</button>` // Already enrolled
+                                        : (isFaculty && currentUserId !== null && course.facultyId === currentUserId) // Check if faculty's own course
+                                            ? `<a href="/faculty/courses" class="btn btn-sm btn-secondary">Manage</a>` // Link to faculty manage page
+                                            : `<button class="btn btn-sm btn-primary" onclick="enrollCourse(${course.id})">Enroll</button>` // Otherwise, show Enroll button
+                                }
                             </td>
                         </tr>
                     `;
                 });
-                
+
                 courseList.innerHTML = html;
             }
             
             // Global function to enroll in a course
             window.enrollCourse = function(courseId) {
-                axios.post(`${API_BASE_URL}/api/courses/enrollments/enroll/${courseId}`) // Use base URL
+                axios.post(`${API_BASE_URL}/api/courses/enrollments/enroll/${courseId}`)
                     .then(function(response) {
                         if (response.data.success) {
                             showSuccess(response.data.message);
-                            loadCourses(); // Reload the course list
+                            loadCourses();
                         } else {
                             showError(response.data.message);
                         }
