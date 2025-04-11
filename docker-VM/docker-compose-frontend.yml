@@ -1,0 +1,42 @@
+version: "3.8"
+
+# 192.168.56.1 - Windows Machine
+# docker-compose up -d galera-node1
+# docker-compose up -d frontend-service
+
+services:
+  galera-node1:
+    image: bitnami/mariadb-galera:latest
+    ports:
+      - "3306:3306"
+    environment:
+      - MARIADB_ROOT_PASSWORD=root
+      - MARIADB_REPLICATION_USER=replicator
+      - MARIADB_REPLICATION_PASSWORD=replicatorpassword
+      - MARIADB_GALERA_CLUSTER_NAME=enrollment-cluster
+      - MARIADB_GALERA_CLUSTER_ADDRESS=gcomm://192.168.56.1,192.168.56.102,192.168.56.101
+      - MARIADB_GALERA_NODE_NAME=galera-node1
+      - MARIADB_GALERA_NODE_ADDRESS=192.168.56.1
+    volumes:
+      - galera-data-node1:/bitnami/mariadb
+    networks:
+      - enrollment-network
+
+  frontend-service:
+    build: ./frontend-service
+    ports:
+      - "8084:8084"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://192.168.56.101:8761/eureka/
+      - SPRING_PROFILES_ACTIVE=docker
+    networks:
+      - enrollment-network
+    depends_on:
+      - galera-node1
+
+networks:
+  enrollment-network:
+    driver: bridge
+
+volumes:
+  galera-data-node1:
