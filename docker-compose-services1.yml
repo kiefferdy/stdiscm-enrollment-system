@@ -18,6 +18,7 @@ services:
       - MARIADB_GALERA_CLUSTER_ADDRESS=gcomm://192.168.56.1,192.168.56.102,192.168.56.101
       - MARIADB_GALERA_NODE_NAME=galera-node2
       - MARIADB_GALERA_NODE_ADDRESS=192.168.56.102
+      - MARIADB_GALERA_MARIABACKUP_PASSWORD=backup_password
     volumes:
       - galera-data-node2:/bitnami/mariadb
     networks:
