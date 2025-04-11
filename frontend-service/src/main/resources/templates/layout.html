@@ -69,9 +69,9 @@
                         </li>
                     </ul>
                     <!-- Links visible to anonymous users -->
-                    <ul class="navbar-nav" sec:authorize="!isAuthenticated()">
+                    <ul class="navbar-nav ms-auto" sec:authorize="!isAuthenticated()">
                          <li class="nav-item">
-                            <a class.nav-link href="/login">Login</a>
+                            <a class="nav-link" href="/login">Login</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="/register">Register</a>
@@ -119,33 +119,15 @@
         /*]]>*/
     </script>
 
-    <!-- Add script for logout form submission -->
     <script sec:authorize="isAuthenticated()">
         document.getElementById('logoutLink')?.addEventListener('click', function(event) {
             event.preventDefault(); // Prevent default link behavior
             const form = document.getElementById('logoutForm');
             if (form) {
-                // Use fetch API to submit the form via POST
-                fetch(form.action, {
-                    method: 'POST',
-                    // Body might not be needed if no data, but headers might be
-                    // If CSRF were enabled, we'd need to include the token here
-                })
-                .then(response => {
-                    if (response.ok) {
-                        // Logout successful on server (returned 200 OK), redirect client-side
-                        console.log("Logout successful, redirecting to login.");
-                        window.location.href = '/login?logout=true'; 
-                    } else {
-                        // Handle potential errors during logout on server
-                        console.error('Logout failed on server:', response.status, response.statusText);
-                        alert('Logout failed. Please try again.');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error during logout fetch:', error);
-                    alert('An error occurred during logout. Please try again.');
-                });
+                console.log("Submitting logout form for server-side redirect.");
+                form.submit(); // Submit the form directly
+            } else {
+                console.error("Logout form not found!");
             }
         });
     </script>

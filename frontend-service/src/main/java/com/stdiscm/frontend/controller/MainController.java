@@ -34,11 +34,23 @@ public class MainController {
     
     @GetMapping("/login")
     public String login() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        // Redirect authenticated users away from login page
+        if (authentication != null && authentication.isAuthenticated() && !(authentication.getPrincipal() instanceof String && authentication.getPrincipal().equals("anonymousUser"))) {
+            log.info("Authenticated user ({}) attempted to access /login, redirecting to /dashboard", authentication.getName());
+            return "redirect:/dashboard";
+        }
         return "login";
     }
     
     @GetMapping("/register")
     public String register() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        // Redirect authenticated users away from register page
+        if (authentication != null && authentication.isAuthenticated() && !(authentication.getPrincipal() instanceof String && authentication.getPrincipal().equals("anonymousUser"))) {
+             log.info("Authenticated user ({}) attempted to access /register, redirecting to /dashboard", authentication.getName());
+            return "redirect:/dashboard";
+        }
         return "register";
     }
     // Helper method to add JWT to model if authenticated
