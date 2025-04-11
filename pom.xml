@@ -16,7 +16,7 @@
         <spring-boot.version>2.7.14</spring-boot.version>
         <spring-cloud.version>2021.0.8</spring-cloud.version>
         <java.version>17</java.version>
-        <lombok.version>1.18.30</lombok.version> <!-- Added explicit Lombok version -->
+        <lombok.version>1.18.30</lombok.version>
     </properties>
 
     <modules>
@@ -26,6 +26,7 @@
         <module>auth-service</module>
         <module>course-service</module>
         <module>grade-service</module>
+        <module>profile-service</module> 
         <module>frontend-service</module>
     </modules>
 
@@ -74,9 +75,8 @@
                             <path>
                                 <groupId>org.projectlombok</groupId>
                                 <artifactId>lombok</artifactId>
-                                <version>${lombok.version}</version> <!-- Use explicitly defined version -->
+                                <version>${lombok.version}</version>
                             </path>
-                            <!-- Add other annotation processors if needed -->
                         </annotationProcessorPaths>
                     </configuration>
                 </plugin>

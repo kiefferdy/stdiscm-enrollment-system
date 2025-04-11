@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout}">
+<head>
+    <title>My Profile</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <h1 class="mb-4">My Profile</h1>
+        <form id="profileForm" class="card">
+            <div class="card-header">Edit Profile Information</div>
+            <div class="card-body">
+                <div id="form-message" class="alert d-none" role="alert"></div> <!-- For success/error messages -->
+
+                <input type="hidden" id="userId" name="userId"> <!-- Populated from localStorage or fetched profile -->
+                <input type="hidden" id="userType" name="userType"> <!-- Populated from localStorage or fetched profile -->
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="firstName" class="form-label">First Name</label>
+                        <input type="text" class="form-control" id="firstName" name="firstName" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="lastName" class="form-label">Last Name</label>
+                        <input type="text" class="form-control" id="lastName" name="lastName" required>
+                    </div>
+                </div>
+                <div class="row">
+                     <div class="col-md-6 mb-3">
+                        <label for="preferredName" class="form-label">Preferred Name</label>
+                        <input type="text" class="form-control" id="preferredName" name="preferredName">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="dateOfBirth" class="form-label">Date of Birth</label>
+                        <input type="date" class="form-control" id="dateOfBirth" name="dateOfBirth">
+                    </div>
+                </div>
+                 <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="gender" class="form-label">Gender</label>
+                        <input type="text" class="form-control" id="gender" name="gender">
+                    </div>
+                     <div class="col-md-6 mb-3">
+                        <label for="primaryEmail" class="form-label">Primary Email</label>
+                        <input type="email" class="form-control" id="primaryEmail" name="primaryEmail" required>
+                    </div>
+                </div>
+                 <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="secondaryEmail" class="form-label">Secondary Email</label>
+                        <input type="email" class="form-control" id="secondaryEmail" name="secondaryEmail">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="mobilePhone" class="form-label">Mobile Phone</label>
+                        <input type="tel" class="form-control" id="mobilePhone" name="mobilePhone">
+                    </div>
+                </div>
+
+                <h5 class="mt-4">Address</h5>
+                <div class="mb-3">
+                    <label for="addressStreet" class="form-label">Street</label>
+                    <input type="text" class="form-control" id="addressStreet" name="addressStreet">
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="addressCity" class="form-label">City</label>
+                        <input type="text" class="form-control" id="addressCity" name="addressCity">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label for="addressState" class="form-label">State</label>
+                        <input type="text" class="form-control" id="addressState" name="addressState">
+                    </div>
+                     <div class="col-md-2 mb-3">
+                        <label for="addressZipCode" class="form-label">Zip Code</label>
+                        <input type="text" class="form-control" id="addressZipCode" name="addressZipCode">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label for="addressCountry" class="form-label">Country</label>
+                        <input type="text" class="form-control" id="addressCountry" name="addressCountry">
+                    </div>
+                </div>
+
+                <h5 class="mt-4">Emergency Contact</h5>
+                 <div class="row">
+                    <div class="col-md-5 mb-3">
+                        <label for="emergencyContactName" class="form-label">Name</label>
+                        <input type="text" class="form-control" id="emergencyContactName" name="emergencyContactName">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label for="emergencyContactRelationship" class="form-label">Relationship</label>
+                        <input type="text" class="form-control" id="emergencyContactRelationship" name="emergencyContactRelationship">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="emergencyContactPhone" class="form-label">Phone</label>
+                        <input type="tel" class="form-control" id="emergencyContactPhone" name="emergencyContactPhone">
+                    </div>
+                </div>
+
+                <!-- Role Specific Fields -->
+                <div id="studentFields" class="d-none mt-4"> <!-- Hidden by default, shown by JS based on userType -->
+                     <h5>Student Information</h5>
+                     <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="studentId" class="form-label">Student ID</label>
+                            <input type="text" class="form-control" id="studentId" name="studentId" readonly> 
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="major" class="form-label">Major</label>
+                            <input type="text" class="form-control" id="major" name="major">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="facultyFields" class="d-none mt-4"> <!-- Hidden by default, shown by JS based on userType -->
+                     <h5>Faculty Information</h5>
+                     <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="employeeId" class="form-label">Employee ID</label>
+                            <input type="text" class="form-control" id="employeeId" name="employeeId" readonly> 
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="department" class="form-label">Department</label>
+                            <input type="text" class="form-control" id="department" name="department">
+                        </div>
+                         <div class="col-md-4 mb-3">
+                            <label for="title" class="form-label">Title</label>
+                            <input type="text" class="form-control" id="title" name="title">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <div class="card-footer text-end">
+                 <button type="submit" class="btn btn-primary">Save Profile</button>
+            </div>
+        </form>
+    </div>
+
+    <th:block layout:fragment="page-scripts">
+        <!-- Include profile.js for API functions -->
+        <script src="/js/profile.js"></script>
+        <script>
+            // Function to populate the form with profile data
+            function populateProfileForm(profile) {
+                if (!profile) {
+                    return;
+                }
+
+                // Populate standard fields
+                // Only set userId if it exists in the passed profile object
+                if (profile.userId !== undefined && profile.userId !== null) {
+                    document.getElementById('userId').value = profile.userId;
+                }
+                // Set userType if it exists
+                if (profile.userType) {
+                    document.getElementById('userType').value = profile.userType;
+                }
+                // *** Removed Debugging for names ***
+                document.getElementById('firstName').value = profile.firstName || '';
+                document.getElementById('lastName').value = profile.lastName || '';
+                document.getElementById('preferredName').value = profile.preferredName || '';
+                document.getElementById('dateOfBirth').value = profile.dateOfBirth || '';
+                document.getElementById('gender').value = profile.gender || '';
+                document.getElementById('primaryEmail').value = profile.primaryEmail || '';
+                document.getElementById('secondaryEmail').value = profile.secondaryEmail || '';
+                document.getElementById('mobilePhone').value = profile.mobilePhone || '';
+                document.getElementById('addressStreet').value = profile.addressStreet || '';
+                document.getElementById('addressCity').value = profile.addressCity || '';
+                document.getElementById('addressState').value = profile.addressState || '';
+                document.getElementById('addressZipCode').value = profile.addressZipCode || '';
+                document.getElementById('addressCountry').value = profile.addressCountry || '';
+                document.getElementById('emergencyContactName').value = profile.emergencyContactName || '';
+                document.getElementById('emergencyContactRelationship').value = profile.emergencyContactRelationship || '';
+                document.getElementById('emergencyContactPhone').value = profile.emergencyContactPhone || '';
+
+                // Show/hide and populate role-specific fields
+                const studentFields = document.getElementById('studentFields');
+                const facultyFields = document.getElementById('facultyFields');
+                
+                if (profile.userType === 'STUDENT' && studentFields) {
+                    document.getElementById('studentId').value = profile.studentId || '';
+                    document.getElementById('major').value = profile.major || '';
+                    studentFields.classList.remove('d-none');
+                    if(facultyFields) facultyFields.classList.add('d-none');
+                } else if (profile.userType === 'FACULTY' && facultyFields) {
+                     document.getElementById('employeeId').value = profile.employeeId || '';
+                     document.getElementById('department').value = profile.department || '';
+                     document.getElementById('title').value = profile.title || '';
+                     facultyFields.classList.remove('d-none');
+                     if(studentFields) studentFields.classList.add('d-none');
+                } else {
+                    // Hide both if type is ADMIN or unknown
+                     if(studentFields) studentFields.classList.add('d-none');
+                     if(facultyFields) facultyFields.classList.add('d-none');
+                }
+            }
+
+            // Function to display messages (success/error)
+            function showMessage(message, isError = false) {
+                const messageDiv = document.getElementById('form-message');
+                if (messageDiv) {
+                    messageDiv.textContent = message;
+                    messageDiv.classList.remove('d-none', 'alert-success', 'alert-danger');
+                    messageDiv.classList.add(isError ? 'alert-danger' : 'alert-success');
+                }
+            }
+             function hideMessage() {
+                 const messageDiv = document.getElementById('form-message');
+                 if (messageDiv) {
+                     messageDiv.classList.add('d-none');
+                 }
+             }
+
+            // Fetch profile data and populate form on page load
+            document.addEventListener('DOMContentLoaded', async function() {
+                if (!requireAuth()) { return; } // Check authentication
+
+                // Attempt to fetch the profile - assuming it was created during registration
+                const profile = await fetchUserProfile(); 
+                
+                if (profile) {
+                    // Profile exists, populate the form fully
+                    populateProfileForm(profile);
+                } else {
+                    // Profile fetch failed (e.g., network error, service down, or unexpected 404)
+                    // The form will remain blank or with defaults. 
+                    // fetchUserProfile already logs errors to the console.
+                    // Show a generic error message to the user.
+                    showMessage("Error: Could not load profile data. Please try again later or contact support.", true);
+                    // Disable form submission if profile data couldn't be loaded
+                    const saveButton = profileForm.querySelector('button[type="submit"]');
+                    if(saveButton) saveButton.disabled = true; 
+                }
+            });
+
+            // Handle form submission
+            const profileForm = document.getElementById('profileForm');
+            if (profileForm) {
+                profileForm.addEventListener('submit', async function(event) {
+                    event.preventDefault(); // Prevent default form submission
+                    hideMessage(); // Clear previous messages
+
+                    const formData = new FormData(event.target);
+                    const profileData = Object.fromEntries(formData.entries());
+
+                    // Ensure userId is correctly parsed as a number
+                    profileData.userId = parseInt(profileData.userId);
+
+                    if (isNaN(profileData.userId)) {
+                         showMessage("Error: Invalid User ID.", true);
+                         return;
+                    }
+
+                    // Ensure userType is included (should be set in hidden field)
+                    if (!profileData.userType) {
+                        showMessage("Error: User Type is missing. Cannot save profile.", true);
+                        return;
+                    }
+
+                    const success = await updateUserProfile(profileData);
+
+                    if (success) {
+                        showMessage("Profile saved successfully!", false);
+                    } else {
+                        showMessage("Failed to save profile. Please check the details and try again.", true);
+                    }
+                });
+            }
+        </script>
+    </th:block>
+</body>
+</html>

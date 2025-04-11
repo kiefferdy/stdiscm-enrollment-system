@@ -49,7 +49,10 @@
                         <li class="nav-item" id="gradesLink">
                             <a class="nav-link" href="/grades">Grades</a>
                         </li>
-                        <!-- Faculty links will be shown only to faculty users -->
+                        <li class="nav-item" id="profileLink"> 
+                            <a class="nav-link" href="/profile">My Profile</a>
+                        </li>
+                        <!-- Faculty links are shown only to faculty users via JS below -->
                         <li class="nav-item dropdown d-none" id="facultyDropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
                                data-bs-toggle="dropdown" aria-expanded="false">
@@ -103,6 +106,7 @@
             const coursesLink = document.getElementById('coursesLink');
             const enrollmentsLink = document.getElementById('enrollmentsLink');
             const gradesLink = document.getElementById('gradesLink');
+            const profileLink = document.getElementById('profileLink'); // Get profile link element
             const facultyDropdown = document.getElementById('facultyDropdown');
 
             if (token) {
@@ -116,12 +120,13 @@
                 if (coursesLink) coursesLink.classList.remove('d-none');
                 if (enrollmentsLink) enrollmentsLink.classList.remove('d-none');
                 if (gradesLink) gradesLink.classList.remove('d-none');
+                if (profileLink) profileLink.classList.remove('d-none'); // Show profile link
 
                 // Show faculty dropdown if user has FACULTY role
                 if (userRoles.includes('FACULTY') && facultyDropdown) {
                     facultyDropdown.classList.remove('d-none');
                 } else if (facultyDropdown) {
-                     facultyDropdown.classList.add('d-none'); // Ensure it's hidden otherwise
+                     facultyDropdown.classList.add('d-none');
                 }
 
             } else {
@@ -135,6 +140,7 @@
                 if (coursesLink) coursesLink.classList.add('d-none');
                 if (enrollmentsLink) enrollmentsLink.classList.add('d-none');
                 if (gradesLink) gradesLink.classList.add('d-none');
+                if (profileLink) profileLink.classList.add('d-none');
                 if (facultyDropdown) facultyDropdown.classList.add('d-none');
             }
         }

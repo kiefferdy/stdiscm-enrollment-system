@@ -50,4 +50,9 @@ public class MainController {
     public String facultyGrades() {
         return "faculty/grades";
     }
+
+    @GetMapping("/profile") 
+    public String profile() {
+        return "profile"; 
+    }
 }

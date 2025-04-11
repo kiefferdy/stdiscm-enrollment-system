@@ -9,7 +9,7 @@
         <div class="row">
             <div class="col-md-12">
                 <h1 class="mb-4">Dashboard</h1>
-                <h2 class="mb-4" id="welcomeMessage"></h2> <!-- Changed div to h2 and removed alert class -->
+                <h2 class="mb-4" id="welcomeMessage"></h2>
             </div>
         </div>
 
@@ -71,6 +71,11 @@
     <th:block layout:fragment="page-scripts">
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Redirect to login if not authenticated (early check)
+            if (!requireAuth()) {
+                 return;
+            }
+
             const username = localStorage.getItem('username');
             const userRoles = JSON.parse(localStorage.getItem('userRoles') || '[]');
 
@@ -84,7 +89,7 @@
 
             // Show/hide faculty section based on role
             const facultySection = document.getElementById('facultySection');
-            if (facultySection) { // Check if element exists
+            if (facultySection) {
                 if (userRoles.includes('FACULTY')) {
                     facultySection.classList.remove('d-none');
                 } else {
@@ -93,10 +98,6 @@
                 }
             }
 
-            // Redirect to login if not authenticated
-            if (!localStorage.getItem('token')) {
-                window.location.href = '/login';
-            }
         });
     </script>
     </th:block>

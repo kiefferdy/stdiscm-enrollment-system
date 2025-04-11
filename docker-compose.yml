@@ -72,6 +72,22 @@ services:
     networks:
       - enrollment-network
 
+  profile-service:
+    build: ./profile-service
+    ports:
+      - "8085:8084"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db-primary:3306/enrollment_profile?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true # Point to profile DB
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      db-primary:
+        condition: service_healthy
+    networks:
+      - enrollment-network
+
   frontend-service:
     build: ./frontend-service
     ports:
