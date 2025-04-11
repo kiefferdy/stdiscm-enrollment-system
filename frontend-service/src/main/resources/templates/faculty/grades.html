@@ -121,20 +121,9 @@
         </div>
     </div>
     
-    <!-- Move page-specific script into the correct layout fragment -->
     <th:block layout:fragment="page-scripts">
-        <script src="/js/auth.js"></script>
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-                // Check if user is authenticated and has faculty role
-            if (!requireAuth()) return;
-            
-            if (!hasRole('FACULTY')) {
-                window.location.href = '/dashboard';
-                return;
-            }
-            
-            const userId = localStorage.getItem('userId');
             const API_BASE_URL = 'http://localhost:8080';
             // Load faculty courses for the dropdown
             loadFacultyCourses();
@@ -192,10 +181,10 @@
             });
             
             function loadFacultyCourses() {
-                axios.get(`${API_BASE_URL}/api/courses/faculty/${userId}`)
+                axios.get(`${API_BASE_URL}/api/courses/my-faculty-courses`)
                     .then(function(response) {
-                        if (response.data.success) {
-                            populateCourseDropdown(response.data.data);
+                         if (response.data && response.data.success !== undefined ? response.data.success : true) { // Adapt success check
+                            populateCourseDropdown(response.data.data || response.data);
                         } else {
                             showError(response.data.message);
                         }

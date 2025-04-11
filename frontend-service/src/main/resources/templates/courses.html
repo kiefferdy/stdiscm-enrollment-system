@@ -53,12 +53,8 @@
     </div>
 
     <th:block layout:fragment="page-scripts">
-        <script src="/js/auth.js"></script>
         <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Check if user is authenticated
-            if (!requireAuth()) return;
-
             const API_BASE_URL = 'http://localhost:8080';
 
             loadCourses();
@@ -79,13 +75,12 @@
             }
             
             function displayCourses(courses) {
-                const courseList = document.getElementById('courseList');
-                const currentUserIdStr = localStorage.getItem('userId');
-                // Parse the user ID to an integer for proper comparison
-                const currentUserId = currentUserIdStr ? parseInt(currentUserIdStr, 10) : null; 
-                const isFaculty = hasRole('FACULTY'); 
+            const courseList = document.getElementById('courseList');
+            
+            const currentUserId = null;
+            const isFaculty = false;
 
-                if (courses.length === 0) {
+            if (courses.length === 0) {
                     courseList.innerHTML = '<tr><td colspan="7" class="text-center">No courses available at the moment.</td></tr>';
                     return;
                 }

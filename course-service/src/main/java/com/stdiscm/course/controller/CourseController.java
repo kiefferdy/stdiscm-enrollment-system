@@ -54,6 +54,13 @@ public class CourseController {
         return ResponseEntity.ok(ApiResponse.success("Faculty courses retrieved successfully", courses));
     }
 
+    // New endpoint to get courses for the currently authenticated faculty
+    @GetMapping("/my-faculty-courses")
+    public ResponseEntity<?> getMyFacultyCourses(@RequestHeader("X-User-Id") Long facultyId) {
+        List<CourseDto> courses = courseService.getCoursesByFacultyId(facultyId);
+        return ResponseEntity.ok(ApiResponse.success("My faculty courses retrieved successfully", courses));
+    }
+
     @PostMapping
     public ResponseEntity<?> createCourse(@Valid @RequestBody CourseDto courseDto, @RequestHeader("X-User-Id") Long userId) {
         System.out.println("--- CourseController.createCourse ENTERED ---"); // Log entry into controller method

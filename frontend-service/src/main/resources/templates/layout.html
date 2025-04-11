@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -36,24 +38,26 @@
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav me-auto">
-                        <li class="nav-item" id="dashboardLink">
+                    <!-- Links visible to authenticated users -->
+                    <ul class="navbar-nav me-auto" sec:authorize="isAuthenticated()">
+                        <li class="nav-item">
                             <a class="nav-link" href="/dashboard">Dashboard</a>
                         </li>
-                        <li class="nav-item" id="coursesLink">
+                        <li class="nav-item">
                             <a class="nav-link" href="/courses">Courses</a>
                         </li>
-                        <li class="nav-item" id="enrollmentsLink">
+                        <li class="nav-item">
                             <a class="nav-link" href="/enrollments">Enrollments</a>
                         </li>
-                        <li class="nav-item" id="gradesLink">
+                        <li class="nav-item">
                             <a class="nav-link" href="/grades">Grades</a>
                         </li>
-                        <li class="nav-item" id="profileLink"> 
+                        <li class="nav-item"> 
                             <a class="nav-link" href="/profile">My Profile</a>
                         </li>
-                        <!-- Faculty links are shown only to faculty users via JS below -->
-                        <li class="nav-item dropdown d-none" id="facultyDropdown">
+                        <!-- Faculty links - visible only if user has ROLE_FACULTY -->
+                        <!-- Use hasAuthority for explicit check -->
+                        <li class="nav-item dropdown" sec:authorize="hasAuthority('ROLE_FACULTY')"> 
                             <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
                                data-bs-toggle="dropdown" aria-expanded="false">
                                 Faculty
@@ -64,15 +68,26 @@
                             </ul>
                         </li>
                     </ul>
-                    <ul class="navbar-nav">
-                        <li class="nav-item" id="loginLink">
-                            <a class="nav-link" href="/login">Login</a>
+                    <!-- Links visible to anonymous users -->
+                    <ul class="navbar-nav" sec:authorize="!isAuthenticated()">
+                         <li class="nav-item">
+                            <a class.nav-link href="/login">Login</a>
                         </li>
-                        <li class="nav-item" id="registerLink">
+                        <li class="nav-item">
                             <a class="nav-link" href="/register">Register</a>
                         </li>
-                        <li class="nav-item d-none" id="logoutLink">
-                            <a class="nav-link" href="#" onclick="logout()">Logout</a>
+                    </ul>
+                     <!-- Logout form - visible only to authenticated users -->
+                    <ul class="navbar-nav" sec:authorize="isAuthenticated()">
+                        <li class="nav-item">
+                            <!-- Hidden form for POST logout (CSRF disabled, so no token needed) -->
+                            <form th:action="@{/logout}" method="post" id="logoutForm" style="display: none;">
+                                <!-- CSRF input removed -->
+                            </form>
+                            <!-- Link to trigger form submission via JS -->
+                            <a class="nav-link" href="#" id="logoutLink">
+                                Logout (<span sec:authentication="name">User</span>)
+                            </a> 
                         </li>
                     </ul>
                 </div>
@@ -92,76 +107,49 @@
         </div>
     </footer>
 
-    <script src="/js/auth.js"></script>
-    <script>
-        // Function to update UI based on auth state
-        function updateUIBasedOnAuthState() {
-            const token = localStorage.getItem('token');
-            const userRoles = JSON.parse(localStorage.getItem('userRoles') || '[]');
-
-            const loginLink = document.getElementById('loginLink');
-            const registerLink = document.getElementById('registerLink');
-            const logoutLink = document.getElementById('logoutLink');
-            const dashboardLink = document.getElementById('dashboardLink');
-            const coursesLink = document.getElementById('coursesLink');
-            const enrollmentsLink = document.getElementById('enrollmentsLink');
-            const gradesLink = document.getElementById('gradesLink');
-            const profileLink = document.getElementById('profileLink'); // Get profile link element
-            const facultyDropdown = document.getElementById('facultyDropdown');
-
-            if (token) {
-                // User is logged in
-                if (loginLink) loginLink.classList.add('d-none');
-                if (registerLink) registerLink.classList.add('d-none');
-                if (logoutLink) logoutLink.classList.remove('d-none');
-
-                // Show relevant links
-                if (dashboardLink) dashboardLink.classList.remove('d-none');
-                if (coursesLink) coursesLink.classList.remove('d-none');
-                if (enrollmentsLink) enrollmentsLink.classList.remove('d-none');
-                if (gradesLink) gradesLink.classList.remove('d-none');
-                if (profileLink) profileLink.classList.remove('d-none'); // Show profile link
-
-                // Show faculty dropdown if user has FACULTY role
-                if (userRoles.includes('FACULTY') && facultyDropdown) {
-                    facultyDropdown.classList.remove('d-none');
-                } else if (facultyDropdown) {
-                     facultyDropdown.classList.add('d-none');
-                }
-
-            } else {
-                // User is not logged in
-                if (loginLink) loginLink.classList.remove('d-none');
-                if (registerLink) registerLink.classList.remove('d-none');
-                if (logoutLink) logoutLink.classList.add('d-none');
-
-                // Hide protected links
-                if (dashboardLink) dashboardLink.classList.add('d-none');
-                if (coursesLink) coursesLink.classList.add('d-none');
-                if (enrollmentsLink) enrollmentsLink.classList.add('d-none');
-                if (gradesLink) gradesLink.classList.add('d-none');
-                if (profileLink) profileLink.classList.add('d-none');
-                if (facultyDropdown) facultyDropdown.classList.add('d-none');
-            }
-        }
-
-        // Run on initial load
-        document.addEventListener('DOMContentLoaded', updateUIBasedOnAuthState);
-
-        // Optional: Re-check on window focus in case localStorage changed in another tab
-        // window.addEventListener('focus', updateUIBasedOnAuthState);
-
-        // Logout function
-        function logout() {
-            localStorage.removeItem('token');
-            localStorage.removeItem('userId');
-            localStorage.removeItem('username');
-            localStorage.removeItem('userRoles');
-            // Update UI immediately after logout before redirecting
-            updateUIBasedOnAuthState();
-            window.location.href = '/';
-        }
+    <!-- Include auth.js (contains Axios interceptor) -->
+    <script src="/js/auth.js"></script> 
+    
+    <!-- Embed JWT token for client-side API calls if user is authenticated -->
+    <script th:inline="javascript" sec:authorize="isAuthenticated()">
+        /*<![CDATA[*/
+        // Make token available globally for Axios interceptor
+        window.jwtToken = /*[[${jwtToken}]]*/ null; 
+        console.log("JWT Token embedded for client-side use.");
+        /*]]>*/
     </script>
+
+    <!-- Add script for logout form submission -->
+    <script sec:authorize="isAuthenticated()">
+        document.getElementById('logoutLink')?.addEventListener('click', function(event) {
+            event.preventDefault(); // Prevent default link behavior
+            const form = document.getElementById('logoutForm');
+            if (form) {
+                // Use fetch API to submit the form via POST
+                fetch(form.action, {
+                    method: 'POST',
+                    // Body might not be needed if no data, but headers might be
+                    // If CSRF were enabled, we'd need to include the token here
+                })
+                .then(response => {
+                    if (response.ok) {
+                        // Logout successful on server (returned 200 OK), redirect client-side
+                        console.log("Logout successful, redirecting to login.");
+                        window.location.href = '/login?logout=true'; 
+                    } else {
+                        // Handle potential errors during logout on server
+                        console.error('Logout failed on server:', response.status, response.statusText);
+                        alert('Logout failed. Please try again.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error during logout fetch:', error);
+                    alert('An error occurred during logout. Please try again.');
+                });
+            }
+        });
+    </script>
+
     <!-- Placeholder for page-specific scripts -->
     <th:block layout:fragment="page-scripts"></th:block>
 </body>

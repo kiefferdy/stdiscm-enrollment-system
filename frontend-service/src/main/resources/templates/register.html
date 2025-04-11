@@ -61,15 +61,10 @@
     <th:block layout:fragment="page-scripts">
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Redirect if already logged in
-            if (redirectIfAuthenticated()) {
-                return; // Stop further execution if redirected
-            }
-
-            const registerButton = document.getElementById('registerButton'); // Get button instead of form
+            const registerButton = document.getElementById('registerButton'); 
             const registerError = document.getElementById('registerError');
             const registerSuccess = document.getElementById('registerSuccess');
-            const registerForm = document.getElementById('registerForm'); // Re-add form retrieval
+            const registerForm = document.getElementById('registerForm');
             
             registerButton.addEventListener('click', function() {
                 const fullName = document.getElementById('fullName').value;
@@ -79,7 +74,7 @@
                 const role = document.querySelector('input[name="role"]:checked').value;
                 
                 // Call the authentication service via API Gateway
-                axios.post('http://localhost:8080/api/auth/register', { // Updated URL
+                axios.post('http://localhost:8080/api/auth/register', {
                     fullName: fullName,
                     username: username,
                     email: email,

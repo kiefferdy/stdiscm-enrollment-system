@@ -162,36 +162,19 @@
         </div>
     </div>
     
-    <!-- Move page-specific script into the correct layout fragment -->
     <th:block layout:fragment="page-scripts">
-        <script src="/js/auth.js"></script> 
         <script>
-            // Removed logging
             document.addEventListener('DOMContentLoaded', function() {
-            // Removed logging
-            
-            // Check if user is authenticated and has faculty role
-            if (!requireAuth()) return;
-            
-            if (!hasRole('FACULTY')) {
-                window.location.href = '/dashboard';
-                return;
-            }
-            
-            const userId = localStorage.getItem('userId');
-            const API_BASE_URL = 'http://localhost:8080'; // Define API Gateway base URL
+            const API_BASE_URL = 'http://localhost:8080'; 
             
             loadFacultyCourses();
             
             // Add course form submission
             const saveButton = document.getElementById('saveNewCourse');
             if (saveButton) {
-                // Removed logging
                 saveButton.addEventListener('click', function() { 
-                    // Removed logging
                     const form = document.getElementById('addCourseForm');
                     if (form.checkValidity()) { 
-                        // Removed logging
                         const courseData = {
                             courseCode: document.getElementById('courseCode').value,
                         title: document.getElementById('title').value,
@@ -201,11 +184,8 @@
                         isOpen: true
                     };
                     
-                    // Removed logging
-                    // Removed logging
                     axios.post(`${API_BASE_URL}/api/courses`, courseData) 
                         .then(function(response) {
-                            // Removed logging
                             if (response.data.success) {
                                 showSuccess('Course created successfully');
                                 form.reset();
@@ -219,20 +199,19 @@
                             }
                         })
                         .catch(function(error) {
-                            console.error("axios.post failed:", error); // Keep error logging
+                            console.error("axios.post failed:", error);
                             if (error.response && error.response.data) {
                                 showError(error.response.data.message);
                             } else {
                                 showError('Failed to create course. Please try again.');
                             }
                         });
-                    } else { 
-                        // Removed logging
+                    } else {
                         form.reportValidity();
                     } 
                 }); 
             } else { 
-                console.error("Save button (#saveNewCourse) not found!"); // Keep error logging
+                console.error("Save button (#saveNewCourse) not found!");
             } 
             
             // Update course form submission
@@ -249,7 +228,7 @@
                         isOpen: document.getElementById('editIsOpen').checked
                     };
                     
-                    axios.put(`${API_BASE_URL}/api/courses/${courseId}`, courseData) // Use base URL
+                    axios.put(`${API_BASE_URL}/api/courses/${courseId}`, courseData)
                         .then(function(response) {
                             if (response.data.success) {
                                 showSuccess('Course updated successfully');
@@ -277,10 +256,10 @@
             });
             
             function loadFacultyCourses() {
-                axios.get(`${API_BASE_URL}/api/courses/faculty/${userId}`) // Use base URL
+                axios.get(`${API_BASE_URL}/api/courses/my-faculty-courses`)
                     .then(function(response) {
-                        if (response.data.success) {
-                            displayCourses(response.data.data);
+                         if (response.data && response.data.success !== undefined ? response.data.success : true) { // Adapt success check
+                            displayCourses(response.data.data || response.data);
                         } else {
                             showError(response.data.message);
                         }

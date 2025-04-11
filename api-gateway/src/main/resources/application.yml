@@ -8,7 +8,8 @@ spring:
     gateway:
       discovery:
         locator:
-          enabled: false # Disabled discovery locator
+          enabled: true
+          lower-case-service-id: true
       globalcors:
         corsConfigurations:
           '[/**]':

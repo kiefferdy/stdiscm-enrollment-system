@@ -1,7 +1,8 @@
 package com.stdiscm.profile.controller;
 
-import com.stdiscm.common.dto.ApiResponse; 
-import com.stdiscm.common.dto.ProfileCreationRequest; 
+import com.stdiscm.common.dto.ApiResponse;
+import com.stdiscm.common.dto.ProfileCreationRequest;
+import com.stdiscm.common.dto.UserProfileDto;
 import com.stdiscm.common.exception.ResourceNotFoundException;
 import com.stdiscm.profile.model.UserProfile;
 import com.stdiscm.profile.model.UserType;
@@ -35,10 +36,10 @@ public class ProfileController {
      * @param userId The ID of the user whose profile to retrieve.
      * @param requestUserId The ID of the user making the request (from header).
      * @param requestUserRoles The roles of the user making the request (from header).
-     * @return ResponseEntity containing the UserProfile or an error.
+     * @return ResponseEntity containing the UserProfileDto or an error.
      */
     @GetMapping("/{userId}")
-    public ResponseEntity<ApiResponse<UserProfile>> getProfileByUserId(
+    public ResponseEntity<ApiResponse<UserProfileDto>> getProfileByUserId( // Return DTO
             @PathVariable Long userId,
             @RequestHeader(HEADER_USER_ID) Long requestUserId,
             @RequestHeader(HEADER_USER_ROLES) String requestUserRoles) {
@@ -51,7 +52,10 @@ public class ProfileController {
         UserProfile profile = profileService.getProfileByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Profile not found for user ID: " + userId));
 
-        return ResponseEntity.ok(new ApiResponse<>(true, "Profile retrieved successfully", profile));
+        // Map UserProfile entity to UserProfileDto
+        UserProfileDto profileDto = mapToDto(profile); 
+
+        return ResponseEntity.ok(new ApiResponse<>(true, "Profile retrieved successfully", profileDto));
     }
 
     /**
@@ -62,10 +66,10 @@ public class ProfileController {
      * @param profileDetails The profile data from the request body.
      * @param requestUserId The ID of the user making the request (from header).
      * @param requestUserRoles The roles of the user making the request (from header).
-     * @return ResponseEntity containing the saved UserProfile or an error.
+     * @return ResponseEntity containing the saved UserProfileDto or an error.
      */
     @PutMapping("/{userId}")
-    public ResponseEntity<ApiResponse<UserProfile>> saveProfile(
+    public ResponseEntity<ApiResponse<UserProfileDto>> saveProfile( // Return DTO
             @PathVariable Long userId,
             @Valid @RequestBody ProfileCreationRequest profileRequest,
             // Headers are optional to allow internal calls (e.g., from auth-service)
@@ -100,8 +104,11 @@ public class ProfileController {
         boolean created = savedProfile.getCreatedAt().equals(savedProfile.getUpdatedAt());
         String message = created ? "Profile created successfully" : "Profile updated successfully";
 
+        // Map saved UserProfile entity to UserProfileDto
+        UserProfileDto savedProfileDto = mapToDto(savedProfile);
+
         return ResponseEntity.status(created ? HttpStatus.CREATED : HttpStatus.OK)
-               .body(new ApiResponse<>(true, message, savedProfile));
+               .body(new ApiResponse<>(true, message, savedProfileDto));
     }
 
     /**
@@ -115,4 +122,37 @@ public class ProfileController {
         return roles.contains(roleToCheck);
     }
 
+    // Manual mapping from Entity to DTO (Consider MapStruct for complex objects)
+    private UserProfileDto mapToDto(UserProfile profile) {
+        if (profile == null) return null;
+        // Manual mapping example (replace with actual implementation)
+        UserProfileDto dto = new UserProfileDto();
+        dto.setProfileId(profile.getProfileId());
+        dto.setUserId(profile.getUserId());
+        dto.setUserType(profile.getUserType() != null ? profile.getUserType().name() : null);
+        dto.setFirstName(profile.getFirstName());
+        dto.setLastName(profile.getLastName());
+        dto.setPreferredName(profile.getPreferredName());
+        dto.setDateOfBirth(profile.getDateOfBirth());
+        dto.setGender(profile.getGender());
+        dto.setPrimaryEmail(profile.getPrimaryEmail());
+        dto.setSecondaryEmail(profile.getSecondaryEmail());
+        dto.setMobilePhone(profile.getMobilePhone());
+        dto.setAddressStreet(profile.getAddressStreet());
+        dto.setAddressCity(profile.getAddressCity());
+        dto.setAddressState(profile.getAddressState());
+        dto.setAddressZipCode(profile.getAddressZipCode());
+        dto.setAddressCountry(profile.getAddressCountry());
+        dto.setEmergencyContactName(profile.getEmergencyContactName());
+        dto.setEmergencyContactRelationship(profile.getEmergencyContactRelationship());
+        dto.setEmergencyContactPhone(profile.getEmergencyContactPhone());
+        dto.setStudentId(profile.getStudentId());
+        dto.setMajor(profile.getMajor());
+        dto.setEmployeeId(profile.getEmployeeId());
+        dto.setDepartment(profile.getDepartment());
+        dto.setTitle(profile.getTitle());
+        dto.setCreatedAt(profile.getCreatedAt());
+        dto.setUpdatedAt(profile.getUpdatedAt());
+        return dto;
+    }
 }

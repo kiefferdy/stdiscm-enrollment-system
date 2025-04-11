@@ -9,7 +9,7 @@
         <div class="row">
             <div class="col-md-12">
                 <h1 class="mb-4">Dashboard</h1>
-                <h2 class="mb-4" id="welcomeMessage"></h2>
+                <h2 class="mb-4" id="welcomeMessage">Welcome, <span sec:authentication="name">User</span>!</h2>
             </div>
         </div>
 
@@ -43,7 +43,7 @@
             </div>
         </div>
 
-        <div class="row d-none" id="facultySection"> <!-- Added d-none class -->
+        <div class="row" id="facultySection" sec:authorize="hasAuthority('ROLE_FACULTY')"> 
             <div class="col-md-12 mt-4">
                 <h2>Faculty Dashboard</h2>
             </div>
@@ -69,37 +69,6 @@
     </div>
 
     <th:block layout:fragment="page-scripts">
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Redirect to login if not authenticated (early check)
-            if (!requireAuth()) {
-                 return;
-            }
-
-            const username = localStorage.getItem('username');
-            const userRoles = JSON.parse(localStorage.getItem('userRoles') || '[]');
-
-            // Set welcome message
-            const welcomeMessage = document.getElementById('welcomeMessage');
-            if (username) {
-                welcomeMessage.textContent = `Welcome, ${username}!`;
-            } else {
-                welcomeMessage.textContent = 'Welcome!'; // Fallback message
-            }
-
-            // Show/hide faculty section based on role
-            const facultySection = document.getElementById('facultySection');
-            if (facultySection) {
-                if (userRoles.includes('FACULTY')) {
-                    facultySection.classList.remove('d-none');
-                } else {
-                    // Ensure it's hidden if not faculty (it should have d-none by default, but belt-and-suspenders)
-                    facultySection.classList.add('d-none');
-                }
-            }
-
-        });
-    </script>
     </th:block>
 </body>
 </html>
