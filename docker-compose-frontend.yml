@@ -4,6 +4,7 @@ version: "3.8"
 # docker-compose up -d galera-node1
 # docker-compose up -d frontend-service
 
+
 services:
   galera-node1:
     image: bitnami/mariadb-galera:latest
@@ -23,25 +24,9 @@ services:
       - ALLOW_EMPTY_PASSWORD=yes
       - MARIADB_GALERA_CLUSTER_BOOTSTRAP=yes
       - MARIADB_GALERA_MARIABACKUP_PASSWORD=backup_password
-      # Add application user with full permissions
-      - MARIADB_USER=enrollment_user
-      - MARIADB_PASSWORD=enrollment_password
-      # Create all necessary databases
-      - MARIADB_DATABASE=enrollment_auth,enrollment_course,enrollment_profile,enrollment_grade,enrollment_frontend
-      # Configure root user to allow remote connections
-      - MARIADB_ROOT_HOST=%
-      # Additional configurations for permissions
-      - MARIADB_EXTRA_FLAGS=--character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
     volumes:
       - galera-data-node1:/bitnami/mariadb
-    command: 
-      - /bin/bash
-      - -c
-      - |
-        /opt/bitnami/scripts/mariadb-galera/entrypoint.sh /opt/bitnami/scripts/mariadb-galera/run.sh &
-        sleep 20
-        mysql -uroot -proot -e "CREATE DATABASE IF NOT EXISTS enrollment_course; CREATE DATABASE IF NOT EXISTS enrollment_profile; CREATE DATABASE IF NOT EXISTS enrollment_grade; CREATE DATABASE IF NOT EXISTS enrollment_frontend; GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY 'root'; GRANT ALL PRIVILEGES ON *.* TO 'root'@'192.168.56.1' IDENTIFIED BY 'root'; GRANT ALL PRIVILEGES ON *.* TO 'root'@'192.168.56.102' IDENTIFIED BY 'root'; GRANT ALL PRIVILEGES ON *.* TO 'root'@'192.168.56.101' IDENTIFIED BY 'root'; GRANT ALL PRIVILEGES ON enrollment_auth.* TO 'enrollment_user'@'%'; GRANT ALL PRIVILEGES ON enrollment_course.* TO 'enrollment_user'@'%'; GRANT ALL PRIVILEGES ON enrollment_profile.* TO 'enrollment_user'@'%'; GRANT ALL PRIVILEGES ON enrollment_grade.* TO 'enrollment_user'@'%'; GRANT ALL PRIVILEGES ON enrollment_frontend.* TO 'enrollment_user'@'%'; FLUSH PRIVILEGES;"
-        tail -f /dev/null
     networks:
       - enrollment-network
 
@@ -52,9 +37,6 @@ services:
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://192.168.56.101:8761/eureka/
       - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATASOURCE_URL=jdbc:mysql://192.168.56.1:3306/enrollment_frontend?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
-      - SPRING_DATASOURCE_USERNAME=enrollment_user
-      - SPRING_DATASOURCE_PASSWORD=enrollment_password
     networks:
       - enrollment-network
     depends_on:
