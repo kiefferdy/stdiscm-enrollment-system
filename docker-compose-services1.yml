@@ -10,6 +10,9 @@ services:
     image: bitnami/mariadb-galera:latest
     ports:
       - "3306:3306"
+      - "4567:4567"  
+      - "4568:4568"   
+      - "4444:4444" 
     environment:
       - MARIADB_ROOT_PASSWORD=root
       - MARIADB_REPLICATION_USER=replicator
@@ -19,6 +22,13 @@ services:
       - MARIADB_GALERA_NODE_NAME=galera-node2
       - MARIADB_GALERA_NODE_ADDRESS=192.168.56.102
       - MARIADB_GALERA_MARIABACKUP_PASSWORD=backup_password
+      # Add application user (will be replicated from node1)
+      - MARIADB_USER=enrollment_user
+      - MARIADB_PASSWORD=enrollment_password
+      # Configure root user to allow remote connections
+      - MARIADB_ROOT_HOST=%
+      # Additional configurations for permissions
+      - MARIADB_EXTRA_FLAGS=--character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     volumes:
       - galera-data-node2:/bitnami/mariadb
     networks:
@@ -32,6 +42,8 @@ services:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://192.168.56.101:8761/eureka/
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_URL=jdbc:mysql://192.168.56.1:3306/enrollment_auth?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=enrollment_user
+      - SPRING_DATASOURCE_PASSWORD=enrollment_password
     networks:
       - enrollment-network
     depends_on:
@@ -45,6 +57,8 @@ services:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://192.168.56.101:8761/eureka/
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_URL=jdbc:mysql://192.168.56.1:3306/enrollment_course?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=enrollment_user
+      - SPRING_DATASOURCE_PASSWORD=enrollment_password
     networks:
       - enrollment-network
     depends_on:
@@ -58,6 +72,8 @@ services:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://192.168.56.101:8761/eureka/
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_URL=jdbc:mysql://192.168.56.1:3306/enrollment_profile?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=enrollment_user
+      - SPRING_DATASOURCE_PASSWORD=enrollment_password
     networks:
       - enrollment-network
     depends_on:
