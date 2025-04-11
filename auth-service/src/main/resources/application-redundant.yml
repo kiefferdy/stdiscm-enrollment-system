@@ -1,18 +1,15 @@
 spring:
   datasource:
-    # Primary database
-    url: jdbc:mysql://db-primary:3306/enrollment_auth?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://192.168.56.1:3306/enrollment_auth?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
     username: root
     password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
-    # Configure connection pool
     hikari:
       connectionTimeout: 20000
       maximumPoolSize: 5
 
-  # Secondary database for redundancy (using routing datasource in code)
   secondary-datasource:
-    url: jdbc:mysql://db-secondary:3306/enrollment_auth?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://192.168.56.102:3306/enrollment_auth?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
     username: root
     password: root
     driver-class-name: com.mysql.cj.jdbc.Driver

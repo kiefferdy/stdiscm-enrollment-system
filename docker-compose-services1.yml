@@ -1,0 +1,70 @@
+version: "3.8"
+
+# 192.168.56.102 - Kali Linux
+# docker-compose up -d galera-node2
+# docker-compose up -d auth-service course-service profile-service
+
+
+services:
+  galera-node2:
+    image: bitnami/mariadb-galera:latest
+    ports:
+      - "3306:3306"
+    environment:
+      - MARIADB_ROOT_PASSWORD=root
+      - MARIADB_REPLICATION_USER=replicator
+      - MARIADB_REPLICATION_PASSWORD=replicatorpassword
+      - MARIADB_GALERA_CLUSTER_NAME=enrollment-cluster
+      - MARIADB_GALERA_CLUSTER_ADDRESS=gcomm://192.168.56.1,192.168.56.102,192.168.56.101
+      - MARIADB_GALERA_NODE_NAME=galera-node2
+      - MARIADB_GALERA_NODE_ADDRESS=192.168.56.102
+    volumes:
+      - galera-data-node2:/bitnami/mariadb
+    networks:
+      - enrollment-network
+
+  auth-service:
+    build: ./auth-service
+    ports:
+      - "8081:8081"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://192.168.56.101:8761/eureka/
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://192.168.56.1:3306/enrollment_auth?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+    networks:
+      - enrollment-network
+    depends_on:
+      - galera-node2
+
+  course-service:
+    build: ./course-service
+    ports:
+      - "8082:8082"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://192.168.56.101:8761/eureka/
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://192.168.56.1:3306/enrollment_course?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+    networks:
+      - enrollment-network
+    depends_on:
+      - galera-node2
+
+  profile-service:
+    build: ./profile-service
+    ports:
+      - "8085:8084"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://192.168.56.101:8761/eureka/
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://192.168.56.1:3306/enrollment_profile?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+    networks:
+      - enrollment-network
+    depends_on:
+      - galera-node2
+
+networks:
+  enrollment-network:
+    driver: bridge
+
+volumes:
+  galera-data-node2:
