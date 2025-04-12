@@ -1,0 +1,78 @@
+datadir="/var/lib/proxysql"
+
+admin_variables=
+{
+    admin_credentials="admin:admin;radmin:radmin"
+    mysql_ifaces="0.0.0.0:6032"
+    refresh_interval=2000
+}
+
+mysql_variables=
+{
+    threads=4
+    max_connections=2048
+    default_query_delay=0
+    default_query_timeout=36000000
+    have_compress=true
+    poll_timeout=2000
+    interfaces="0.0.0.0:6033"
+    default_schema="enrollment"
+    stacksize=1048576
+    server_version="8.0.27"
+    connect_timeout_server=10000
+    monitor_username="root"
+    monitor_password="root"
+    monitor_history=600000
+    monitor_connect_interval=60000
+    monitor_ping_interval=10000
+    monitor_read_only_interval=1500
+    monitor_read_only_timeout=500
+    ping_interval_server_msec=120000
+    ping_timeout_server=500
+    commands_stats=true
+    sessions_sort=true
+    connect_retries_on_failure=10
+}
+
+# Define Galera Cluster backend servers
+mysql_servers =
+(
+    {
+        address = "galera-node1"
+        port = 3306
+        hostgroup = 10
+        status = "ONLINE"
+        weight = 1
+        compression = 0
+        max_connections = 1000
+    },
+    {
+        address = "galera-node2"
+        port = 3306
+        hostgroup = 10
+        status = "ONLINE"
+        weight = 1
+        compression = 0
+        max_connections = 1000
+    },
+    {
+        address = "galera-node3"
+        port = 3306
+        hostgroup = 10
+        status = "ONLINE"
+        weight = 1
+        compression = 0
+        max_connections = 1000
+    }
+)
+
+# Define MySQL users
+mysql_users =
+(
+    {
+        username = "root"
+        password = "root"
+        default_hostgroup = 10
+        active = 1
+    }
+)
