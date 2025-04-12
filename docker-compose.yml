@@ -5,6 +5,13 @@ services:
       - "8761:8761"
     networks:
       - enrollment-network
+    depends_on:
+      node1:
+        condition: service_healthy
+      node2:
+        condition: service_healthy
+      node3:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
       interval: 10s
@@ -31,12 +38,16 @@ services:
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
       - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATASOURCE_URL=jdbc:mysql://db-primary:3306/enrollment_auth?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_URL=jdbc:mysql://database-cluster:3306/enrollment_auth?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
     depends_on:
       discovery-service:
         condition: service_healthy
-      db-primary:
+      node1:
         condition: service_healthy
+      node2:
+        condition: service_started
+      node3:
+        condition: service_started
     networks:
       - enrollment-network
 
@@ -47,12 +58,16 @@ services:
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
       - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATASOURCE_URL=jdbc:mysql://db-primary:3306/enrollment_course?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_URL=jdbc:mysql://database-cluster:3306/enrollment_course?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
     depends_on:
       discovery-service:
         condition: service_healthy
-      db-primary:
+      node1:
         condition: service_healthy
+      node2:
+        condition: service_started
+      node3:
+        condition: service_started
     networks:
       - enrollment-network
 
@@ -63,12 +78,16 @@ services:
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
       - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATASOURCE_URL=jdbc:mysql://db-primary:3306/enrollment_grade?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_URL=jdbc:mysql://database-cluster:3306/enrollment_grade?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
     depends_on:
       discovery-service:
         condition: service_healthy
-      db-primary:
+      node1:
         condition: service_healthy
+      node2:
+        condition: service_started
+      node3:
+        condition: service_started
     networks:
       - enrollment-network
 
@@ -79,12 +98,16 @@ services:
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
       - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATASOURCE_URL=jdbc:mysql://db-primary:3306/enrollment_profile?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true # Point to profile DB
+      - SPRING_DATASOURCE_URL=jdbc:mysql://database-cluster:3306/enrollment_profile?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
     depends_on:
       discovery-service:
         condition: service_healthy
-      db-primary:
+      node1:
         condition: service_healthy
+      node2:
+        condition: service_started
+      node3:
+        condition: service_started
     networks:
       - enrollment-network
 
@@ -101,46 +124,133 @@ services:
     networks:
       - enrollment-network
 
-  db-primary:
-    image: mysql:8.0
+  # First Galera node
+  node1:
+    image: bitnami/mariadb-galera:latest
+    restart: always
     ports:
       - "3308:3306"
     environment:
-      - MYSQL_ROOT_PASSWORD=root
-      - MYSQL_DATABASE=enrollment
+      # Basic settings
+      - MARIADB_ROOT_PASSWORD=root
+      - MARIADB_DATABASE=enrollment
+      # Galera cluster settings
+      - MARIADB_GALERA_CLUSTER_NAME=enrollment_cluster
+      - MARIADB_GALERA_CLUSTER_ADDRESS=gcomm://
+      - MARIADB_GALERA_BOOTSTRAP=yes
+      - MARIADB_GALERA_FORCE_SAFETOBOOTSTRAP=yes
+      # Authentication
+      - MARIADB_GALERA_MARIABACKUP_USER=backup
+      - MARIADB_GALERA_MARIABACKUP_PASSWORD=backup123
+      # Create databases
+      - MARIADB_EXTRA_DATABASES=enrollment_auth,enrollment_course,enrollment_grade,enrollment_profile
+      # Node configuration
+      - MARIADB_GALERA_NODE_NAME=node1
+      # Additional settings - performance
+      - MARIADB_INNODB_BUFFER_POOL_SIZE=256M
+      - MARIADB_INNODB_LOG_FILE_SIZE=64M
+      - MARIADB_MAX_ALLOWED_PACKET=128M
+      - MARIADB_MAX_CONNECTIONS=1000
     volumes:
-      - db-primary-data:/var/lib/mysql
+      - node1-data:/bitnami/mariadb
     networks:
-      - enrollment-network
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      
-  db-secondary:
-    image: mysql:8.0
-    ports:
-      - "3309:3306"
-    environment:
-      - MYSQL_ROOT_PASSWORD=root
-      - MYSQL_DATABASE=enrollment
-    volumes:
-      - db-secondary-data:/var/lib/mysql
-    networks:
-      - enrollment-network
+      enrollment-network:
+        aliases:
+          - database-cluster
+          - node1
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-# Create a separate docker-compose-redundant.yml for redundant database configuration
+  # Second Galera node
+  node2:
+    image: bitnami/mariadb-galera:latest
+    restart: always
+    ports:
+      - "3309:3306"
+    environment:
+      # Basic settings
+      - MARIADB_ROOT_PASSWORD=root
+      - MARIADB_DATABASE=enrollment
+      # Galera cluster settings
+      - MARIADB_GALERA_CLUSTER_NAME=enrollment_cluster
+      - MARIADB_GALERA_CLUSTER_ADDRESS=gcomm://node1
+      # Authentication
+      - MARIADB_GALERA_MARIABACKUP_USER=backup
+      - MARIADB_GALERA_MARIABACKUP_PASSWORD=backup123
+      # Create databases
+      - MARIADB_EXTRA_DATABASES=enrollment_auth,enrollment_course,enrollment_grade,enrollment_profile
+      # Node configuration
+      - MARIADB_GALERA_NODE_NAME=node2
+      # Additional settings - performance
+      - MARIADB_INNODB_BUFFER_POOL_SIZE=256M
+      - MARIADB_INNODB_LOG_FILE_SIZE=64M
+      - MARIADB_MAX_ALLOWED_PACKET=128M
+      - MARIADB_MAX_CONNECTIONS=1000
+    volumes:
+      - node2-data:/bitnami/mariadb
+    networks:
+      enrollment-network:
+        aliases:
+          - database-cluster
+          - node2
+    depends_on:
+      node1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Third Galera node
+  node3:
+    image: bitnami/mariadb-galera:latest
+    restart: always
+    ports:
+      - "3310:3306"
+    environment:
+      # Basic settings
+      - MARIADB_ROOT_PASSWORD=root
+      - MARIADB_DATABASE=enrollment
+      # Galera cluster settings
+      - MARIADB_GALERA_CLUSTER_NAME=enrollment_cluster
+      - MARIADB_GALERA_CLUSTER_ADDRESS=gcomm://node1
+      # Authentication
+      - MARIADB_GALERA_MARIABACKUP_USER=backup
+      - MARIADB_GALERA_MARIABACKUP_PASSWORD=backup123
+      # Create databases
+      - MARIADB_EXTRA_DATABASES=enrollment_auth,enrollment_course,enrollment_grade,enrollment_profile
+      # Node configuration
+      - MARIADB_GALERA_NODE_NAME=node3
+      # Additional settings - performance
+      - MARIADB_INNODB_BUFFER_POOL_SIZE=256M
+      - MARIADB_INNODB_LOG_FILE_SIZE=64M
+      - MARIADB_MAX_ALLOWED_PACKET=128M
+      - MARIADB_MAX_CONNECTIONS=1000
+    volumes:
+      - node3-data:/bitnami/mariadb
+    networks:
+      enrollment-network:
+        aliases:
+          - database-cluster
+          - node3
+    depends_on:
+      node1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 networks:
   enrollment-network:
     driver: bridge
 
 volumes:
-  db-primary-data:
-  db-secondary-data:
+  node1-data:
+  node2-data:
+  node3-data:
