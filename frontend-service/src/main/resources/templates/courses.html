@@ -54,10 +54,7 @@
 
     <th:block layout:fragment="page-scripts">
         <script th:inline="javascript">
-        /*<![CDATA[*/
         document.addEventListener('DOMContentLoaded', function() {
-            // Removed API_BASE_URL constant, using relative paths directly
-
             loadCourses();
 
             function loadCourses() {
