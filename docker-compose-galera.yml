@@ -109,7 +109,7 @@ services:
       - "3309:3306"
     environment:
       - MARIADB_GALERA_CLUSTER_NAME=enrollment_cluster
-      - MARIADB_GALERA_CLUSTER_ADDRESS=gcomm://
+      - MARIADB_GALERA_CLUSTER_ADDRESS=gcomm://galera-node1,galera-node2,galera-node3
       - MARIADB_ROOT_PASSWORD=root
       - MARIADB_DATABASE=enrollment
       - MARIADB_ENABLE_ROOT_FROM_ALL=yes
@@ -120,10 +120,11 @@ services:
     networks:
       - enrollment-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-u", "root", "-proot"]
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   galera-node2:
     image: bitnami/mariadb-galera:latest
@@ -145,10 +146,11 @@ services:
       galera-node1:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-u", "root", "-proot"]
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   galera-node3:
     image: bitnami/mariadb-galera:latest
@@ -170,10 +172,11 @@ services:
       galera-node1:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-u", "root", "-proot"]
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   # ProxySQL configuration
   proxysql:
@@ -187,14 +190,11 @@ services:
     networks:
       - enrollment-network
     depends_on:
-      galera-node1:
-        condition: service_healthy
-      galera-node2:
-        condition: service_healthy
-      galera-node3:
-        condition: service_healthy
+      - galera-node1
+      - galera-node2
+      - galera-node3
     healthcheck:
-      test: ["CMD", "bash", "-c", "mysqladmin ping -h 127.0.0.1 -P 6032 -u admin -padmin || exit 1"]
+      test: ["CMD", "bash", "-c", "mysql -h 127.0.0.1 -P 6032 -uadmin -padmin -e 'SELECT 1' || exit 1"]
       interval: 10s
       timeout: 10s
       retries: 12

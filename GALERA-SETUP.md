@@ -1,14 +1,14 @@
 # Galera Cluster with ProxySQL Setup Guide
 
-This document provides comprehensive instructions for running the Enrollment System with Galera Cluster for database redundancy and ProxySQL for connection management.
+This document provides instructions for running the Enrollment System with Galera Cluster for database redundancy and ProxySQL for connection management.
 
 ## Architecture Overview
 
 The database tier consists of:
 
-1. **3-Node Galera Cluster**: True multi-master replication where all nodes can accept both reads and writes
-2. **ProxySQL**: MySQL-aware load balancer that routes queries intelligently across the cluster
-3. **Application Services**: Connect to the database through ProxySQL with no code changes required
+1.  **3-Node Galera Cluster**: True multi-master replication using MariaDB Galera.
+2.  **ProxySQL**: MySQL-aware load balancer that routes queries intelligently across the cluster.
+3.  **Application Services**: Connect to the database through ProxySQL.
 
 ```
 Application Services → ProxySQL → Galera Cluster (3 nodes)
@@ -18,127 +18,124 @@ Application Services → ProxySQL → Galera Cluster (3 nodes)
 
 ### Galera Cluster
 
-- **galera-node1**: Primary node that bootstraps the cluster
-- **galera-node2**: Secondary node that joins the cluster
-- **galera-node3**: Tertiary node that joins the cluster
+- **galera-node1**: First node, used for bootstrapping the cluster initially.
+- **galera-node2**: Second node, joins the cluster.
+- **galera-node3**: Third node, joins the cluster.
 
-All nodes contain identical data due to synchronous replication.
+All nodes contain identical data due to synchronous replication. Defined in `docker-compose-galera.yml`.
 
 ### ProxySQL
 
-ProxySQL distributes database queries across the Galera Cluster nodes according to these rules:
-
-- Distributes SELECT queries across all nodes
-- Routes write operations across all nodes (using Galera's built-in conflict resolution)
-- Monitors node health and routes traffic only to healthy nodes
-- Maintains connection pools for improved performance
+- **proxysql**: Routes application queries to healthy Galera nodes. Defined in `docker-compose-galera.yml`. Configuration is managed via `proxysql/proxysql.cnf` and potentially `proxysql/init.sql`.
 
 ## Running the System
 
-To start the system with Galera Cluster and ProxySQL:
+### Initial Setup (First Time Only)
+
+**Important:** Before the first run, ensure any previous cluster data is cleaned up (see Reset section if needed).
+
+1.  **Bootstrap the Cluster:**
+    ```bash
+    # Make the script executable if needed
+    chmod +x bootstrap-galera.sh
+
+    # Run the bootstrap script
+    ./bootstrap-galera.sh
+    ```
+    This script handles the special procedure of starting the first node, letting it initialize, stopping it, and then starting the full cluster using `docker-compose-galera.yml`. It also runs the database initialization scripts found in `galera-init/`.
+
+2.  **Monitor Logs:** Check the logs to ensure all services start correctly.
+    ```bash
+    docker-compose -f docker-compose-galera.yml logs -f
+    ```
+
+### Normal Startup (After Initial Setup)
+
+If the cluster has been bootstrapped successfully before and you just need to start the services:
 
 ```bash
 docker-compose -f docker-compose-galera.yml up -d
 ```
 
-The first startup might take longer as the Galera Cluster initializes. Monitor the logs to ensure everything starts correctly:
+## Verifying the Setup
+
+Use the test script:
 
 ```bash
-docker-compose -f docker-compose-galera.yml logs -f
+# Make the script executable if needed
+chmod +x test-galera.sh
+
+# Run the test script
+./test-galera.sh
 ```
 
-## Verifying the Setup
+This script checks:
+- Connectivity and cluster size on each Galera node (`mariadb` client).
+- Connectivity to ProxySQL (`mysql` client).
+
+Alternatively, run manual checks:
 
 ### 1. Check Galera Cluster Status
 
 ```bash
-docker exec -it galera-node1 mysql -uroot -proot -e "SHOW STATUS LIKE 'wsrep_%';"
+# Check from any node, e.g., galera-node1
+docker exec -it galera-node1 mariadb -uroot -proot -e "SHOW STATUS LIKE 'wsrep_cluster_size';"
+# Expected output should show a size of 3 eventually.
+
+docker exec -it galera-node1 mariadb -uroot -proot -e "SHOW STATUS LIKE 'wsrep_local_state_comment';"
+# Expected output should be 'Synced' or 'Donor/Desynced' briefly during startup.
 ```
 
-Look for:
-- `wsrep_cluster_size`: Should be 3
-- `wsrep_cluster_status`: Should be "Primary"
-- `wsrep_ready`: Should be "ON"
-
-### 2. Check ProxySQL Configuration
+### 2. Check ProxySQL Backend Nodes
 
 ```bash
-docker exec -it proxysql mysql -h127.0.0.1 -P6032 -uadmin -padmin -e "SELECT * FROM mysql_servers;"
+# Connect to ProxySQL Admin interface
+docker exec -it proxysql mysql -h127.0.0.1 -P6032 -uadmin -padmin -e "SELECT hostgroup_id, hostname, port, status FROM runtime_mysql_servers;"
 ```
-
-This should show all three Galera nodes configured in ProxySQL.
+This should show all three Galera nodes (`galera-node1`, `galera-node2`, `galera-node3`) listed, ideally with `ONLINE` status.
 
 ### 3. Test Connection Through ProxySQL
 
 ```bash
+# Connect via ProxySQL client port
 docker exec -it proxysql mysql -h127.0.0.1 -P6033 -uroot -proot -e "SELECT @@hostname;"
 ```
+Running this multiple times might show different underlying Galera node hostnames.
 
-Running this command multiple times should show different hostnames as ProxySQL routes to different nodes.
+## Cluster Management Scripts
 
-### 4. Connect to Any Galera Node Directly
+### Recovering a Failed Node
 
-```bash
-docker exec -it galera-node1 mysql -uroot -proot -e "SHOW DATABASES;"
-```
-
-You should see all your enrollment system databases.
-
-## Benefits of This Configuration
-
-- **High Availability**: System continues to operate even if a database node fails
-- **Scalability**: Handles more concurrent users during peak enrollment periods
-- **Zero Downtime Maintenance**: Nodes can be updated one at a time without downtime
-- **Consistent Performance**: Load is balanced across all database nodes
-- **Connection Pooling**: Improved performance through connection reuse
-- **Automatic Failover**: ProxySQL detects failures and routes around them
-
-## Monitoring
-
-Monitor the health and performance of your Galera Cluster using:
+If a single Galera node container stops or fails, use the recovery script:
 
 ```bash
-docker exec -it galera-node1 mysql -uroot -proot -e "SHOW GLOBAL STATUS LIKE 'wsrep_%';"
-```
+# Make the script executable if needed
+chmod +x recover-galera.sh
 
-For ProxySQL monitoring:
+# Run the recovery script
+./recover-galera.sh
+```
+The script will prompt for the node name (e.g., `galera-node1`) and attempt to stop and restart it correctly using `docker-compose-galera.yml`.
+
+### Resetting the Cluster (Development/Testing ONLY)
+
+**WARNING:** This script deletes ALL data in the Galera cluster volumes.
 
 ```bash
-docker exec -it proxysql mysql -h127.0.0.1 -P6032 -uadmin -padmin -e "SELECT * FROM stats.stats_mysql_connection_pool;"
+# Make the script executable if needed
+chmod +x reset-galera.sh
+
+# Run the reset script (will ask for confirmation)
+./reset-galera.sh
 ```
+This script stops the cluster, removes the data volumes, and then runs `./bootstrap-galera.sh` to start fresh.
 
 ## Troubleshooting
 
-If you encounter issues:
-
-1. **Check Galera Cluster Status**:
-   ```bash
-   docker exec -it galera-node1 mysql -uroot -proot -e "SHOW STATUS LIKE 'wsrep_cluster_%';"
-   ```
-
-2. **View ProxySQL Logs**:
-   ```bash
-   docker logs proxysql
-   ```
-
-3. **Check Service Connectivity**:
-   ```bash
-   docker logs auth-service
-   ```
-
-4. **Restart ProxySQL**:
-   ```bash
-   docker-compose -f docker-compose-galera.yml restart proxysql
-   ```
-
-5. **If a Node Falls Out of Sync**:
-   ```bash
-   docker-compose -f docker-compose-galera.yml restart galera-node2
-   ```
-
-6. **Reset the Entire Setup**:
-   ```bash
-   docker-compose -f docker-compose-galera.yml down -v
-   docker-compose -f docker-compose-galera.yml up -d
-   ```
-   Note: This will remove all data in the databases.
+1.  **Check Container Status:** `docker ps` (See which containers are running/restarting).
+2.  **Check Galera Node Logs:** `docker logs galera-node1` (Replace with node name). Look for WSREP errors.
+3.  **Check ProxySQL Logs:** `docker logs proxysql`. Look for connection errors to backend nodes.
+4.  **Check Application Service Logs:** `docker logs auth-service` (Replace with service name). Look for database connection errors.
+5.  **Run Test Script:** `./test-galera.sh` to check basic connectivity.
+6.  **Restart a Service:** `docker-compose -f docker-compose-galera.yml restart <service_name>` (e.g., `proxysql`, `galera-node2`).
+7.  **Full Reset:** If things are completely broken, use `./reset-galera.sh` (Data Loss!).
