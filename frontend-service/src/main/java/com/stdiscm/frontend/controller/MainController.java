@@ -70,10 +70,28 @@ public class MainController {
     
     @GetMapping("/courses")
     public String courses(Model model) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Long userId = null;
+        boolean isFaculty = false;
+
+        if (authentication != null && authentication.isAuthenticated() && authentication.getPrincipal() instanceof CustomUserDetails) {
+            CustomUserDetails principal = (CustomUserDetails) authentication.getPrincipal();
+            userId = principal.getUserId();
+            // Check if the user has the FACULTY role (adjust role name if necessary)
+            isFaculty = principal.getAuthorities().stream()
+                               .map(GrantedAuthority::getAuthority)
+                               .anyMatch(role -> role.equals("ROLE_FACULTY") || role.equals("FACULTY"));
+            log.info("Courses page accessed by user ID: {}, Is Faculty: {}", userId, isFaculty);
+        } else {
+             log.info("Courses page accessed by unauthenticated or non-CustomUserDetails principal.");
+        }
+
+        model.addAttribute("userId", userId);
+        model.addAttribute("isFaculty", isFaculty);
         addJwtToModelIfAuthenticated(model);
         return "courses";
     }
-    
+
     @GetMapping("/enrollments")
     public String enrollments(Model model) {
         addJwtToModelIfAuthenticated(model);

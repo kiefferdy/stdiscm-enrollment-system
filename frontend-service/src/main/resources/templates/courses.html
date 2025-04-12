@@ -53,14 +53,16 @@
     </div>
 
     <th:block layout:fragment="page-scripts">
-        <script>
+        <script th:inline="javascript">
+        /*<![CDATA[*/
         document.addEventListener('DOMContentLoaded', function() {
-            const API_BASE_URL = 'http://localhost:8080';
+            // Removed API_BASE_URL constant, using relative paths directly
 
             loadCourses();
 
             function loadCourses() {
-                axios.get(`${API_BASE_URL}/api/courses/open`)
+                // Use relative path directly
+                axios.get('/api/courses/open') 
                     .then(function(response) {
                         if (response.data.success) {
                             displayCourses(response.data.data);
@@ -75,12 +77,13 @@
             }
             
             function displayCourses(courses) {
-            const courseList = document.getElementById('courseList');
-            
-            const currentUserId = null;
-            const isFaculty = false;
+                const courseList = document.getElementById('courseList');
+                
+                // Get user details from model attributes passed by the controller
+                const currentUserId = /*[[${userId}]]*/ null;
+                const isFaculty = /*[[${isFaculty}]]*/ false;
 
-            if (courses.length === 0) {
+                if (courses.length === 0) {
                     courseList.innerHTML = '<tr><td colspan="7" class="text-center">No courses available at the moment.</td></tr>';
                     return;
                 }
@@ -118,7 +121,7 @@
             
             // Global function to enroll in a course
             window.enrollCourse = function(courseId) {
-                axios.post(`${API_BASE_URL}/api/courses/enrollments/enroll/${courseId}`)
+                axios.post(`/api/courses/enrollments/enroll/${courseId}`)
                     .then(function(response) {
                         if (response.data.success) {
                             showSuccess(response.data.message);
