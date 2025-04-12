@@ -1,6 +1,8 @@
 package com.stdiscm.profile.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stdiscm.common.dto.ApiResponse;
+import com.stdiscm.common.dto.ProfileCreationRequest;
 import com.stdiscm.common.dto.UserProfileDto;
 import com.stdiscm.common.exception.ResourceNotFoundException;
 import com.stdiscm.profile.model.UserProfile;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/profiles")
@@ -58,17 +61,102 @@ public class ProfileController {
     }
 
     /**
-     * Creates or updates the profile for the specified user ID.
-     * Only the user themselves or an admin can save the profile.
+     * Creates a new profile using data from ProfileCreationRequest.
+     * This endpoint is primarily used by the frontend service for initial profile creation.
      *
-     * @param userId The ID of the user whose profile to save.
-     * @param profileDetails The profile data from the request body.
-     * @param requestUserId The ID of the user making the request (from header).
-     * @param requestUserRoles The roles of the user making the request (from header).
-     * @return ResponseEntity containing the saved UserProfileDto or an error.
+     * @param userId The ID of the user whose profile to create.
+     * @param profileRequest The profile creation data.
+     * @param requestUserId The ID of the user making the request (optional for internal calls).
+     * @param requestUserRoles The roles of the user making the request (optional for internal calls).
+     * @return ResponseEntity containing the saved UserProfileDto.
      */
     @PutMapping("/{userId}")
-    public ResponseEntity<ApiResponse<UserProfileDto>> saveProfile( // Return DTO
+    public ResponseEntity<ApiResponse<UserProfileDto>> saveProfile(
+            @PathVariable Long userId,
+            @Valid @RequestBody Object profileData,  // Accept any object type to handle both DTOs
+            @RequestHeader(name = HEADER_USER_ID, required = false) Long requestUserId,
+            @RequestHeader(name = HEADER_USER_ROLES, required = false) String requestUserRoles) {
+
+        // Authorization Check: Only perform if headers are present (external call)
+        if (requestUserId != null && requestUserRoles != null) {
+            if (!userId.equals(requestUserId) && !hasRole(requestUserRoles, ADMIN_ROLE)) {
+                throw new AccessDeniedException("User does not have permission to save this profile.");
+            }
+        } // If headers are null, it's an internal call, skip auth check.
+
+        // Check if profile already exists
+        Optional<UserProfile> existingProfileOpt = profileService.getProfileByUserId(userId);
+        UserProfile profileToSave;
+        String message;
+
+        if (existingProfileOpt.isPresent()) {
+            // Update existing profile
+            profileToSave = existingProfileOpt.get();
+            
+            // Determine which type of object we received and handle accordingly
+            if (profileData instanceof ProfileCreationRequest) {
+                // Basic profile creation from auth service
+                ProfileCreationRequest profileRequest = (ProfileCreationRequest) profileData;
+                updateProfileFromCreationRequest(profileToSave, profileRequest);
+            } else {
+                // Full profile update from frontend
+                try {
+                    // Convert the Object to UserProfileDto - this handles the case when frontend sends all fields
+                    ObjectMapper mapper = new ObjectMapper();
+                    mapper.findAndRegisterModules(); // For LocalDate support
+                    UserProfileDto profileDto = mapper.convertValue(profileData, UserProfileDto.class);
+                    updateProfileFromDto(profileToSave, profileDto);
+                } catch (Exception e) {
+                    throw new IllegalArgumentException("Invalid profile data format: " + e.getMessage());
+                }
+            }
+            message = "Profile updated successfully";
+        } else {
+            // Create new profile
+            profileToSave = new UserProfile();
+            profileToSave.setUserId(userId);
+            
+            if (profileData instanceof ProfileCreationRequest) {
+                // Basic profile creation
+                ProfileCreationRequest profileRequest = (ProfileCreationRequest) profileData;
+                profileToSave.setUserType(UserType.valueOf(profileRequest.getUserType()));
+                profileToSave.setFirstName(profileRequest.getFirstName());
+                profileToSave.setLastName(profileRequest.getLastName());
+                profileToSave.setPrimaryEmail(profileRequest.getPrimaryEmail());
+            } else {
+                // Full profile creation (unlikely, but handle it)
+                try {
+                    ObjectMapper mapper = new ObjectMapper();
+                    mapper.findAndRegisterModules(); // For LocalDate support
+                    UserProfileDto profileDto = mapper.convertValue(profileData, UserProfileDto.class);
+                    profileToSave.setUserType(UserType.valueOf(profileDto.getUserType()));
+                    updateProfileFromDto(profileToSave, profileDto);
+                } catch (Exception e) {
+                    throw new IllegalArgumentException("Invalid profile data format: " + e.getMessage());
+                }
+            }
+            message = "Profile created successfully";
+        }
+
+        UserProfile savedProfile = profileService.saveProfile(userId, profileToSave);
+        UserProfileDto savedProfileDto = mapToDto(savedProfile);
+
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(new ApiResponse<>(true, message, savedProfileDto));
+    }
+
+    /**
+     * Updates an existing profile with detailed information from UserProfileDto.
+     * This endpoint is used for updating complete profile information after initial creation.
+     *
+     * @param userId The ID of the user whose profile to update.
+     * @param profileDto The complete profile data.
+     * @param requestUserId The ID of the user making the request.
+     * @param requestUserRoles The roles of the user making the request.
+     * @return ResponseEntity containing the saved UserProfileDto.
+     */
+    @PutMapping("/{userId}/details")
+    public ResponseEntity<ApiResponse<UserProfileDto>> updateProfileDetails(
             @PathVariable Long userId,
             @Valid @RequestBody UserProfileDto profileDto,
             @RequestHeader(name = HEADER_USER_ID, required = false) Long requestUserId,
@@ -81,20 +169,31 @@ public class ProfileController {
              }
         } // If headers are null, it's an internal call, skip auth check.
 
-        // --- Fetch existing profile and merge ---
-        UserProfile existingProfile = profileService.getProfileByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Profile not found for user ID: " + userId + ". Cannot update non-existent profile."));
+        UserProfile profileToSave;
+        String message;
+        
+        // --- Check if profile exists, if not create a new one ---
+        Optional<UserProfile> existingProfileOpt = profileService.getProfileByUserId(userId);
+        
+        if (existingProfileOpt.isPresent()) {
+            // Update existing profile with data from DTO
+            profileToSave = existingProfileOpt.get();
+            updateProfileFromDto(profileToSave, profileDto);
+            message = "Profile updated successfully";
+        } else {
+            // Create new profile from DTO
+            profileToSave = new UserProfile();
+            profileToSave.setUserId(userId);
+            updateProfileFromDto(profileToSave, profileDto);
+            message = "Profile created successfully";
+        }
 
-        // Update existing profile with data from DTO
-        updateProfileFromDto(existingProfile, profileDto);
-
-        UserProfile savedProfile = profileService.saveProfile(userId, existingProfile);
-        String message = "Profile updated successfully";
+        UserProfile savedProfile = profileService.saveProfile(userId, profileToSave);
 
         // Map saved UserProfile entity to UserProfileDto
         UserProfileDto savedProfileDto = mapToDto(savedProfile);
 
-        return ResponseEntity.status(HttpStatus.OK) // Always OK status for update
+        return ResponseEntity.status(HttpStatus.OK) // Always OK status for update or create
                .body(new ApiResponse<>(true, message, savedProfileDto));
     }
 
@@ -107,6 +206,25 @@ public class ProfileController {
         }
         List<String> roles = Arrays.asList(rolesHeader.split("\\s*,\\s*"));
         return roles.contains(roleToCheck);
+    }
+    /**
+     * Helper method to update a UserProfile entity with data from a ProfileCreationRequest.
+     * This is used for basic profile initialization.
+     *
+     * @param profile The entity to update.
+     * @param request The request containing the new data.
+     */
+    private void updateProfileFromCreationRequest(UserProfile profile, ProfileCreationRequest request) {
+        if (request.getUserType() != null) {
+            try {
+                profile.setUserType(UserType.valueOf(request.getUserType()));
+            } catch (IllegalArgumentException e) {
+                System.err.println("Warning: Invalid UserType received in request: " + request.getUserType());
+            }
+        }
+        if (request.getFirstName() != null) profile.setFirstName(request.getFirstName());
+        if (request.getLastName() != null) profile.setLastName(request.getLastName());
+        if (request.getPrimaryEmail() != null) profile.setPrimaryEmail(request.getPrimaryEmail());
     }
 
     /**
