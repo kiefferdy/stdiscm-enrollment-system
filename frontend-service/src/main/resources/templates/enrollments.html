@@ -51,24 +51,18 @@
         </div>
     </div>
 
-    <!-- Move page-specific script into the correct layout fragment -->
     <th:block layout:fragment="page-scripts">
-        <script src="/js/auth.js"></script>
         <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Check if user is authenticated
-            if (!requireAuth()) return;
-
-            const userId = localStorage.getItem('userId');
-            const API_BASE_URL = 'http://localhost:8080'; // Define API Gateway base URL
+            const API_BASE_URL = 'http://localhost:8080'; 
 
             loadEnrollments();
 
             function loadEnrollments() {
-                axios.get(`${API_BASE_URL}/api/courses/enrollments/student/${userId}`) // Use base URL
+                axios.get(`${API_BASE_URL}/api/courses/enrollments/my-enrollments`)
                     .then(function(response) {
-                        if (response.data.success) {
-                            displayEnrollments(response.data.data);
+                        if (response.data && response.data.success !== undefined ? response.data.success : true) { // Adapt success check
+                            displayEnrollments(response.data.data || response.data);
                         } else {
                             showError(response.data.message);
                         }

@@ -3,7 +3,6 @@ package com.stdiscm.grade.controller;
 import com.stdiscm.common.dto.ApiResponse;
 import com.stdiscm.common.dto.EnrollmentDto;
 import com.stdiscm.common.dto.GradeSubmissionDto;
-// import com.stdiscm.common.model.User; // No longer needed directly
 import com.stdiscm.grade.service.GradeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +23,12 @@ public class GradeController {
         List<EnrollmentDto> grades = gradeService.getGradesByStudentId(studentId);
         return ResponseEntity.ok(ApiResponse.success("Student grades retrieved successfully", grades));
     }
+
+    @GetMapping("/my-grades")
+    public ResponseEntity<?> getMyGrades(@RequestHeader("X-User-Id") Long studentId) {
+        List<EnrollmentDto> grades = gradeService.getGradesByStudentId(studentId);
+        return ResponseEntity.ok(ApiResponse.success("My grades retrieved successfully", grades));
+    }
     
     @GetMapping("/course/{courseId}")
     public ResponseEntity<?> getGradesByCourseId(@PathVariable Long courseId) {
@@ -39,7 +44,7 @@ public class GradeController {
     
     @PostMapping("/submit")
     public ResponseEntity<?> submitGrade(@Valid @RequestBody GradeSubmissionDto gradeSubmissionDto, 
-                                        @RequestHeader("X-User-Id") Long facultyId) { // Changed to RequestHeader
+                                        @RequestHeader("X-User-Id") Long facultyId) {
         // Service method already accepts facultyId
         EnrollmentDto updatedEnrollment = gradeService.submitGrade(gradeSubmissionDto, facultyId); 
         return ResponseEntity.ok(ApiResponse.success("Grade submitted successfully", updatedEnrollment));

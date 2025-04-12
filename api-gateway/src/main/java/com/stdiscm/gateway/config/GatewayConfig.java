@@ -35,12 +35,13 @@ public class GatewayConfig {
                         .filters(f -> f.filter(authFilter.apply(createConfig())))
                         .uri("lb://grade-service"))
                 .route("profile-service", r -> r.path("/api/profiles/**") 
-                        .filters(f -> f.filter(authFilter.apply(createConfig())))
-                        .uri("lb://profile-service")) 
-                .route("frontend-service", r -> r.path("/**")
-                        .uri("lb://frontend-service"))
-                .build();
-    }
+                         .filters(f -> f.filter(authFilter.apply(createConfig())))
+                         .uri("lb://profile-service")) 
+                 // Frontend route - Auth handled by frontend service itself using sessions/security context
+                 .route("frontend-service", r -> r.path("/**")
+                         .uri("lb://frontend-service"))
+                 .build();
+     }
     
     private AuthFilter.Config createConfig(String... excludedUrls) {
         AuthFilter.Config config = new AuthFilter.Config();

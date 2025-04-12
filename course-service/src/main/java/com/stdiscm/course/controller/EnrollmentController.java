@@ -2,14 +2,13 @@ package com.stdiscm.course.controller;
 
 import com.stdiscm.common.dto.ApiResponse;
 import com.stdiscm.common.dto.EnrollmentDto;
-// import com.stdiscm.common.model.User; // No longer needed directly
 import com.stdiscm.course.service.EnrollmentService;
-import com.stdiscm.common.dto.GradeSubmissionDto; // Import GradeSubmissionDto
+import com.stdiscm.common.dto.GradeSubmissionDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import javax.validation.Valid; // Import Valid
+import javax.validation.Valid;
 import java.util.List;
 
 @RestController
@@ -23,6 +22,12 @@ public class EnrollmentController {
     public ResponseEntity<?> getEnrollmentsByStudentId(@PathVariable Long studentId) {
         List<EnrollmentDto> enrollments = enrollmentService.getEnrollmentsByStudentId(studentId);
         return ResponseEntity.ok(ApiResponse.success("Student enrollments retrieved successfully", enrollments));
+    }
+
+    @GetMapping("/my-enrollments")
+    public ResponseEntity<?> getMyEnrollments(@RequestHeader("X-User-Id") Long studentId) {
+        List<EnrollmentDto> enrollments = enrollmentService.getEnrollmentsByStudentId(studentId);
+        return ResponseEntity.ok(ApiResponse.success("My enrollments retrieved successfully", enrollments));
     }
     
     @GetMapping("/course/{courseId}")

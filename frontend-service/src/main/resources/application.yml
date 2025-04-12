@@ -1,5 +1,6 @@
 server:
   port: 8084
+  forward-headers-strategy: framework
 
 spring:
   application:
@@ -28,3 +29,6 @@ management:
     web:
       exposure:
         include: "*"
+
+jwt:
+  secret: E91E158E4C6656F68B1B5D1C316766DE98D2AD6EF3BFB44F78E9CFCDF5

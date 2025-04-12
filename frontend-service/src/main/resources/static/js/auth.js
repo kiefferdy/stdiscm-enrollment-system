@@ -1,71 +1,27 @@
-// Auth utilities
+// Auth utilities - Using Server-Side Sessions + Embedded Token for Client-Side API Calls
 
-// Set authorization header for all axios requests
+// Axios request interceptor to add Authorization header from embedded token
 axios.interceptors.request.use(
     config => {
-        const token = localStorage.getItem('token');
-        if (token) {
-            config.headers['Authorization'] = `Bearer ${token}`;
+        // Check if the global token variable exists (set by Thymeleaf in layout.html)
+        if (window.jwtToken) {
+            config.headers['Authorization'] = `Bearer ${window.jwtToken}`;
+            console.log("Axios interceptor added Authorization header.");
+        } else {
+             console.log("Axios interceptor: window.jwtToken not found.");
         }
         return config;
     },
     error => {
+        console.error("Axios request interceptor error:", error);
         return Promise.reject(error);
     }
 );
 
-// Handle 401 Unauthorized responses
-axios.interceptors.response.use(
-    response => {
-        return response;
-    },
-    error => {
-        if (error.response && error.response.status === 401) {
-            // Redirect to login if unauthorized
-            localStorage.removeItem('token');
-            localStorage.removeItem('userId');
-            localStorage.removeItem('username');
-            localStorage.removeItem('userRoles');
-            window.location.href = '/login';
-        }
-        return Promise.reject(error);
-    }
-);
-
-// Check if user is authenticated
-function isAuthenticated() {
-    return !!localStorage.getItem('token');
-}
-
-// Check if user has a specific role
-function hasRole(role) {
-    const userRoles = JSON.parse(localStorage.getItem('userRoles') || '[]');
-    return userRoles.includes(role);
-}
-
-// Logout function
+// Logout function - simply redirects to the server logout endpoint
 function logout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('userId');
-    localStorage.removeItem('username');
-    localStorage.removeItem('userRoles');
-    window.location.href = '/';
+    // Server handles session invalidation and cookie removal
+    window.location.href = '/logout'; 
 }
 
-// Redirect to login if not authenticated
-function requireAuth() {
-    if (!isAuthenticated()) {
-        window.location.href = '/login';
-        return false;
-    }
-    return true;
-}
-
-// Redirect to dashboard if already authenticated
-function redirectIfAuthenticated() {
-    if (isAuthenticated()) {
-        window.location.href = '/dashboard';
-        return true;
-    }
-    return false;
-}
+console.log("auth.js loaded (simplified for server-side sessions)");

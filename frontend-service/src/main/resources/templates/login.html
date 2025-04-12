@@ -37,46 +37,61 @@
     <th:block layout:fragment="page-scripts">
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Redirect if already logged in
-            if (redirectIfAuthenticated()) {
-                return; // Stop further execution if redirected
-            }
-
-            const loginButton = document.getElementById('loginButton'); // Get button instead of form
+            const loginButton = document.getElementById('loginButton'); 
             const loginError = document.getElementById('loginError');
-            const loginForm = document.getElementById('loginForm'); // Re-add form retrieval
+            const loginForm = document.getElementById('loginForm');
             
             loginButton.addEventListener('click', function() {
                 const username = document.getElementById('username').value;
                 const password = document.getElementById('password').value;
                                 
                 // Call the authentication service via API Gateway
-                axios.post('http://localhost:8080/api/auth/login', { // Updated URL
+                axios.post('http://localhost:8080/api/auth/login', {
                     username: username,
                     password: password
                 })
                 .then(function(response) {
                     if (response.data.success) {
                         const data = response.data.data;
-                        // Store token and user information in localStorage
-                        localStorage.setItem('token', data.token);
-                        localStorage.setItem('userId', data.id);
-                        localStorage.setItem('username', data.username);
-                        localStorage.setItem('userRoles', JSON.stringify(data.roles));
+                        const jwtToken = data.token;
                         
-                        loginForm.reset(); // Reset form on success
-                        // Redirect to dashboard
-                        window.location.href = '/dashboard';
+                        // Step 2: Call frontend service to establish session
+                        axios.post('/app-login', { token: jwtToken })
+                            .then(function(sessionResponse) {
+                                if (sessionResponse.data.success) {
+                                    loginForm.reset();
+                                    // Redirect to dashboard after session is established
+                                    window.location.href = '/dashboard';
+                                } else {
+                                    // Error establishing session
+                                    loginError.textContent = sessionResponse.data.message || 'Failed to establish session.';
+                                    loginError.classList.remove('d-none');
+                                }
+                            })
+                            .catch(function(sessionError) {
+                                // Network or other error calling /app-login
+                                console.error("Error calling /app-login:", sessionError);
+                                if (sessionError.response && sessionError.response.data) {
+                                     loginError.textContent = sessionError.response.data.message || 'Session establishment failed.';
+                                } else {
+                                     loginError.textContent = 'Session establishment failed. Please try again.';
+                                }
+                                loginError.classList.remove('d-none');
+                            });
+                            
                     } else {
-                        loginError.textContent = response.data.message;
+                        // Error from /api/auth/login
+                        loginError.textContent = response.data.message || 'Login failed (auth service).';
                         loginError.classList.remove('d-none');
                     }
                 })
                 .catch(function(error) {
+                    // Error from /api/auth/login (network or other)
+                    console.error("Error calling /api/auth/login:", error);
                     if (error.response && error.response.data) {
-                        loginError.textContent = error.response.data.message || 'Login failed. Please try again.';
+                        loginError.textContent = error.response.data.message || 'Login failed (network/server error).';
                     } else {
-                        loginError.textContent = 'Login failed. Please try again.';
+                        loginError.textContent = 'Login failed. Please check connection and try again.';
                     }
                     loginError.classList.remove('d-none');
                 });

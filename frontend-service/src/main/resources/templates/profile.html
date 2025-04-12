@@ -10,10 +10,17 @@
         <form id="profileForm" class="card">
             <div class="card-header">Edit Profile Information</div>
             <div class="card-body">
-                <div id="form-message" class="alert d-none" role="alert"></div> <!-- For success/error messages -->
+                <!-- Display server-side messages first -->
+                <div th:if="${error}" id="server-error-message" class="alert alert-danger" role="alert" th:text="${error}"></div>
+                <div th:if="${info}" id="server-info-message" class="alert alert-success" role="alert" th:text="${info}"></div>
+                
+                <!-- Div for client-side messages after save -->
+                <div id="form-message" class="alert d-none" role="alert"></div> 
 
-                <input type="hidden" id="userId" name="userId"> <!-- Populated from localStorage or fetched profile -->
-                <input type="hidden" id="userType" name="userType"> <!-- Populated from localStorage or fetched profile -->
+                <!-- Populate hidden fields from model if profile exists -->
+                <input type="hidden" id="userId" name="userId" th:value="${profile?.userId}"> 
+                <input type="hidden" id="userType" name="userType" th:value="${profile?.userType}"> 
+
 
                 <div class="row">
                     <div class="col-md-6 mb-3">
@@ -38,7 +45,12 @@
                  <div class="row">
                     <div class="col-md-6 mb-3">
                         <label for="gender" class="form-label">Gender</label>
-                        <input type="text" class="form-control" id="gender" name="gender">
+                        <select class="form-select" id="gender" name="gender">
+                            <option value="">Select...</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Prefer not to say">Prefer not to say</option>
+                        </select>
                     </div>
                      <div class="col-md-6 mb-3">
                         <label for="primaryEmail" class="form-label">Primary Email</label>
@@ -137,10 +149,17 @@
     </div>
 
     <th:block layout:fragment="page-scripts">
-        <!-- Include profile.js for API functions -->
+        <!-- Include profile.js for API functions (updateUserProfile) -->
         <script src="/js/profile.js"></script>
-        <script>
-            // Function to populate the form with profile data
+        <!-- Use Thymeleaf inlining to pass model data -->
+        <script th:inline="javascript">
+            /*<![CDATA[*/
+            const serverProfile = /*[[${profile}]]*/ null; // Get profile from model
+            const serverError = /*[[${error}]]*/ null;     // Get error from model
+            const serverInfo = /*[[${info}]]*/ null;      // Get info from model
+            /*]]>*/
+
+            // Function to populate the form with profile data (keep as is)
             function populateProfileForm(profile) {
                 if (!profile) {
                     return;
@@ -211,25 +230,36 @@
                  }
              }
 
-            // Fetch profile data and populate form on page load
-            document.addEventListener('DOMContentLoaded', async function() {
-                if (!requireAuth()) { return; } // Check authentication
-
-                // Attempt to fetch the profile - assuming it was created during registration
-                const profile = await fetchUserProfile(); 
+            // Populate form using server-provided data on page load
+            document.addEventListener('DOMContentLoaded', function() {
+                // No need for requireAuth() here as server handles auth before rendering
                 
-                if (profile) {
-                    // Profile exists, populate the form fully
-                    populateProfileForm(profile);
-                } else {
-                    // Profile fetch failed (e.g., network error, service down, or unexpected 404)
-                    // The form will remain blank or with defaults. 
-                    // fetchUserProfile already logs errors to the console.
-                    // Show a generic error message to the user.
-                    showMessage("Error: Could not load profile data. Please try again later or contact support.", true);
-                    // Disable form submission if profile data couldn't be loaded
+                // Hide server messages if client-side message needs to be shown later
+                const serverErrorDiv = document.getElementById('server-error-message');
+                const serverInfoDiv = document.getElementById('server-info-message');
+
+                if (serverProfile) {
+                    // Profile data provided by server, populate the form
+                    console.log("Populating form with server-provided profile:", serverProfile);
+                    populateProfileForm(serverProfile);
+                    // Keep server info message if it exists (e.g., "profile created")
+                    if (serverErrorDiv) serverErrorDiv.classList.add('d-none'); // Hide potential server error if profile is loaded
+                } else if (serverError) {
+                    // Error provided by server (profile fetch/creation failed)
+                    console.error("Server reported an error:", serverError);
+                    // Server error message is already displayed via Thymeleaf.
+                    // Disable form submission.
                     const saveButton = profileForm.querySelector('button[type="submit"]');
                     if(saveButton) saveButton.disabled = true; 
+                    if (serverInfoDiv) serverInfoDiv.classList.add('d-none'); // Hide potential server info if error occurred
+                } else {
+                    // Should not happen if controller logic is correct, but handle defensively
+                     console.warn("No profile data or error message provided by the server.");
+                     showMessage("Could not determine profile status.", true);
+                     const saveButton = profileForm.querySelector('button[type="submit"]');
+                     if(saveButton) saveButton.disabled = true; 
+                     if (serverErrorDiv) serverErrorDiv.classList.add('d-none'); 
+                     if (serverInfoDiv) serverInfoDiv.classList.add('d-none');
                 }
             });
 
@@ -257,10 +287,15 @@
                         return;
                     }
 
-                    const success = await updateUserProfile(profileData);
+                    const success = await updateUserProfile(profileData); // Assumes updateUserProfile is in profile.js
 
                     if (success) {
                         showMessage("Profile saved successfully!", false);
+                        // Optionally hide server messages after successful client-side save
+                        const serverErrorDiv = document.getElementById('server-error-message');
+                        const serverInfoDiv = document.getElementById('server-info-message');
+                        if (serverErrorDiv) serverErrorDiv.classList.add('d-none'); 
+                        if (serverInfoDiv) serverInfoDiv.classList.add('d-none');
                     } else {
                         showMessage("Failed to save profile. Please check the details and try again.", true);
                     }

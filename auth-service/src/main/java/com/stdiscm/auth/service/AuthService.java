@@ -99,12 +99,11 @@ public class AuthService {
                 ResponseEntity<?> profileResponse = profileServiceClient.saveProfile(savedUser.getId(), profileRequest);
                 log.info("Profile service call for userId {} completed with status: {}", savedUser.getId(), profileResponse.getStatusCode());
 
-                // Optional: Check profileResponse status and log/handle errors more robustly
                 if (!profileResponse.getStatusCode().is2xxSuccessful()) {
                      log.error("Failed to create profile for userId {}. Status: {}, Body: {}",
                              savedUser.getId(), profileResponse.getStatusCode(), profileResponse.getBody());
-                     // TODO: Consider if registration should fail if profile creation fails (e.g., throw exception)
-                }
+                     // If profile creation fails, registration still succeeds (current behavior).
+                 }
 
             } catch (Exception e) {
                 // Log Feign exception but allow registration to succeed
@@ -118,9 +117,15 @@ public class AuthService {
         return savedUser;
     }
 
-    // New method to find user by ID
+    // Method to find user by ID
     public User findUserById(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
+    }
+
+    // Method to find user by username (needed for /users/me endpoint)
+    public User findUserByUsername(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "username", username));
     }
 }

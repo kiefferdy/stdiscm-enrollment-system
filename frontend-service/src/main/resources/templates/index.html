@@ -44,41 +44,36 @@
         </div>
 
         <div class="row mt-5">
-            <div class="col-md-6 offset-md-3 text-center">
-                <div id="guestActions">
-                    <h3>Getting Started</h3>
-                    <a href="/login" class="btn btn-primary me-2">Login</a>
-                    <a href="/register" class="btn btn-outline-primary">Register</a>
+            <div class="col-md-6 offset-md-3">
+                <!-- Show Login/Register if not authenticated -->
+                <div id="guestActions" sec:authorize="!isAuthenticated()">
+                    <h3 class="text-center">Getting Started</h3>
+                    <div class="row g-2 justify-content-center">
+                        <div class="col-4">
+                            <a href="/login" class="btn btn-primary w-100">Login</a>
+                        </div>
+                        <div class="col-4">
+                            <a href="/register" class="btn btn-outline-primary w-100">Register</a>
+                        </div>
+                    </div>
                 </div>
-                <div id="userActions" class="d-none">
-                    <h3>Quick Actions</h3>
-                    <a href="/dashboard" class="btn btn-primary me-2">Go to Dashboard</a>
-                    <a href="/courses" class="btn btn-outline-primary">View Courses</a>
+                <!-- Show Quick Actions if authenticated -->
+                <div id="userActions" sec:authorize="isAuthenticated()">
+                    <h3 class="text-center">Quick Actions</h3>
+                     <div class="row g-2 justify-content-center">
+                        <div class="col-4">
+                            <a href="/dashboard" class="btn btn-primary w-100">Go to Dashboard</a>
+                        </div>
+                        <div class="col-4">
+                            <a href="/courses" class="btn btn-outline-primary w-100">View Courses</a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <th:block layout:fragment="page-scripts">
-    <script>
-        // This script runs specifically on the index page
-        document.addEventListener('DOMContentLoaded', function() {
-            const token = localStorage.getItem('token');
-
-            const guestActions = document.getElementById('guestActions');
-            const userActions = document.getElementById('userActions');
-
-            if (guestActions && userActions) { // Check elements exist
-                if (token) {
-                    guestActions.classList.add('d-none');
-                    userActions.classList.remove('d-none');
-                } else {
-                    guestActions.classList.remove('d-none');
-                    userActions.classList.add('d-none');
-                }
-            }
-        });
-    </script>
     </th:block>
 </body>
 </html>
