@@ -31,12 +31,11 @@ services:
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
       - SPRING_PROFILES_ACTIVE=docker
-      # Connect directly to the first galera node instead of through proxysql
-      - SPRING_DATASOURCE_URL=jdbc:mysql://galera-node1:3306/enrollment_auth?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_URL=jdbc:mysql://proxysql:6033/enrollment_auth?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
     depends_on:
       discovery-service:
         condition: service_healthy
-      galera-node1:
+      proxysql:
         condition: service_healthy
     networks:
       - enrollment-network
@@ -48,12 +47,11 @@ services:
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
       - SPRING_PROFILES_ACTIVE=docker
-      # Connect directly to the first galera node instead of through proxysql
-      - SPRING_DATASOURCE_URL=jdbc:mysql://galera-node1:3306/enrollment_course?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_URL=jdbc:mysql://proxysql:6033/enrollment_course?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
     depends_on:
       discovery-service:
         condition: service_healthy
-      galera-node1:
+      proxysql:
         condition: service_healthy
     networks:
       - enrollment-network
@@ -65,12 +63,11 @@ services:
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
       - SPRING_PROFILES_ACTIVE=docker
-      # Connect directly to the first galera node instead of through proxysql
-      - SPRING_DATASOURCE_URL=jdbc:mysql://galera-node1:3306/enrollment_grade?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_URL=jdbc:mysql://proxysql:6033/enrollment_grade?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
     depends_on:
       discovery-service:
         condition: service_healthy
-      galera-node1:
+      proxysql:
         condition: service_healthy
     networks:
       - enrollment-network
@@ -82,12 +79,11 @@ services:
     environment:
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
       - SPRING_PROFILES_ACTIVE=docker
-      # Connect directly to the first galera node instead of through proxysql
-      - SPRING_DATASOURCE_URL=jdbc:mysql://galera-node1:3306/enrollment_profile?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_URL=jdbc:mysql://proxysql:6033/enrollment_profile?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
     depends_on:
       discovery-service:
         condition: service_healthy
-      galera-node1:
+      proxysql:
         condition: service_healthy
     networks:
       - enrollment-network
@@ -108,7 +104,7 @@ services:
   # Galera Cluster configuration
   galera-node1:
     image: bitnami/mariadb-galera:latest
-    container_name: galera-node1  # Explicit container name
+    container_name: galera-node1
     ports:
       - "3309:3306"
     environment:
@@ -131,7 +127,7 @@ services:
 
   galera-node2:
     image: bitnami/mariadb-galera:latest
-    container_name: galera-node2  # Explicit container name
+    container_name: galera-node2
     ports:
       - "3307:3306"
     environment:
@@ -156,7 +152,7 @@ services:
 
   galera-node3:
     image: bitnami/mariadb-galera:latest
-    container_name: galera-node3  # Explicit container name
+    container_name: galera-node3
     ports:
       - "3308:3306"
     environment:
@@ -178,6 +174,32 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # ProxySQL configuration
+  proxysql:
+    image: proxysql/proxysql:latest
+    container_name: proxysql
+    ports:
+      - "6033:6033" # MySQL client port
+      - "6032:6032" # Admin port
+    volumes:
+      - ./proxysql/proxysql.cnf:/etc/proxysql.cnf
+    networks:
+      - enrollment-network
+    depends_on:
+      galera-node1:
+        condition: service_healthy
+      galera-node2:
+        condition: service_healthy
+      galera-node3:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "mysqladmin ping -h 127.0.0.1 -P 6032 -u admin -padmin || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 60s
+    restart: on-failure
 
 networks:
   enrollment-network:

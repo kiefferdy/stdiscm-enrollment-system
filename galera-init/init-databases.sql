@@ -1,9 +1,9 @@
--- Create necessary databases for our services
-CREATE DATABASE IF NOT EXISTS enrollment_auth CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE DATABASE IF NOT EXISTS enrollment_course CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE DATABASE IF NOT EXISTS enrollment_grade CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE DATABASE IF NOT EXISTS enrollment_profile CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+-- Create databases for each service
+CREATE DATABASE IF NOT EXISTS enrollment_auth;
+CREATE DATABASE IF NOT EXISTS enrollment_course;
+CREATE DATABASE IF NOT EXISTS enrollment_grade;
+CREATE DATABASE IF NOT EXISTS enrollment_profile;
 
--- Grant permissions to root user for all databases
+-- Grant privileges to root user (already has access, but being explicit)
 GRANT ALL PRIVILEGES ON *.* TO 'root'@'%';
 FLUSH PRIVILEGES;

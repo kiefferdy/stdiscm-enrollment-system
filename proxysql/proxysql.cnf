@@ -16,7 +16,7 @@ mysql_variables=
     have_compress=true
     poll_timeout=2000
     interfaces="0.0.0.0:6033"
-    default_schema="enrollment"
+    default_schema="information_schema"
     stacksize=1048576
     server_version="8.0.27"
     connect_timeout_server=10000
@@ -74,5 +74,31 @@ mysql_users =
         password = "root"
         default_hostgroup = 10
         active = 1
+    }
+)
+
+# Split read/write operations across different hostgroups
+mysql_query_rules =
+(
+    {
+        rule_id = 100
+        active = 1
+        match_digest = "^SELECT .* FOR UPDATE"
+        destination_hostgroup = 10
+        apply = 1
+    },
+    {
+        rule_id = 200
+        active = 1
+        match_digest = "^SELECT"
+        destination_hostgroup = 10
+        apply = 1
+    },
+    {
+        rule_id = 300
+        active = 1
+        match_digest = ".*"
+        destination_hostgroup = 10
+        apply = 1
     }
 )
