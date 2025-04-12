@@ -139,9 +139,9 @@ public class EnrollmentService {
             throw new BadRequestException("Faculty not authorized to submit grade for this course enrollment.");
         }
 
-        // 3. Check if enrollment is active
-        if (!enrollment.getIsActive()) {
-             throw new BadRequestException("Cannot submit grade for an inactive enrollment.");
+        // 3. Check if enrollment is active or if the grade is "Withdrawn"
+        if (!enrollment.getIsActive() && !"Withdrawn".equals(gradeSubmissionDto.getGrade())) {
+             throw new BadRequestException("Only 'Withdrawn' grade can be submitted for an inactive enrollment.");
         }
 
         // 4. Update grade and save

@@ -242,16 +242,27 @@
                 let html = '';
                 
                 enrollments.forEach(enrollment => {
+                    // Determine status based on isActive flag
+                    const isActive = enrollment.isActive;
+                    
                     html += `
-                        <tr>
-                            <td>${enrollment.studentName}</td>
+                        <tr${!isActive ? ' data-inactive="true"' : ''}>
+                            <td>${enrollment.studentName}
+                               ${!isActive ? '<span class="badge bg-warning ms-2">Dropped</span>' : ''}
+                            </td>
                             <td>${formatDate(enrollment.enrollmentDate)}</td>
                             <td>${enrollment.grade || 'Not Graded'}</td>
                             <td>
-                                <button class="btn btn-sm btn-primary" 
-                                        onclick="openGradeModal(${enrollment.id}, '${enrollment.studentName}', '${enrollment.courseTitle}', '${enrollment.grade || ''}')">
-                                    ${enrollment.grade ? 'Update Grade' : 'Submit Grade'}
-                                </button>
+                                ${isActive ? 
+                                    `<button class="btn btn-sm btn-primary" 
+                                        onclick="openGradeModal(${enrollment.id}, '${enrollment.studentName}', '${enrollment.courseTitle}', '${enrollment.grade || ''}', false)">
+                                        ${enrollment.grade ? 'Update Grade' : 'Submit Grade'}
+                                    </button>` : 
+                                    `<button class="btn btn-sm btn-warning" 
+                                        onclick="openGradeModal(${enrollment.id}, '${enrollment.studentName}', '${enrollment.courseTitle}', '${enrollment.grade || ''}', true)">
+                                        Mark as Withdrawn
+                                    </button>`
+                                }
                             </td>
                         </tr>
                     `;
@@ -261,11 +272,33 @@
             }
             
             // Global function to open the grade modal
-            window.openGradeModal = function(enrollmentId, studentName, courseTitle, currentGrade) {
+            window.openGradeModal = function(enrollmentId, studentName, courseTitle, currentGrade, isWithdrawn) {
                 document.getElementById('enrollmentId').value = enrollmentId;
                 document.getElementById('studentName').value = studentName;
                 document.getElementById('courseTitle').value = courseTitle;
-                document.getElementById('grade').value = currentGrade;
+                
+                // If student has dropped and we're marking as withdrawn, pre-select the Withdrawn option
+                if (isWithdrawn) {
+                    document.getElementById('grade').value = 'Withdrawn';
+                    
+                    // Add a note in the modal about the student having dropped the course
+                    const modalBody = document.querySelector('#gradeModal .modal-body');
+                    const warningDiv = document.getElementById('withdrawnWarning') || document.createElement('div');
+                    warningDiv.id = 'withdrawnWarning';
+                    warningDiv.className = 'alert alert-warning mb-3';
+                    warningDiv.innerHTML = 'This student has dropped the course. You can mark them as Withdrawn.'; 
+                    
+                    // Insert at the beginning of the form
+                    const form = document.getElementById('gradeForm');
+                    form.insertBefore(warningDiv, form.firstChild);
+                } else {
+                    // For active enrollments, use the current grade
+                    document.getElementById('grade').value = currentGrade;
+                    
+                    // Remove the warning if it exists
+                    const warningDiv = document.getElementById('withdrawnWarning');
+                    if (warningDiv) warningDiv.remove();
+                }
                 
                 // Open the modal
                 const modal = new bootstrap.Modal(document.getElementById('gradeModal'));
